@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="תיקי מניות">
+<link rel="manifest" href="manifest.json">
+<title>תיקי מניות</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --bg2: #13131a;
+  --bg3: #1c1c26;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f0f0f5;
+  --text2: #8888a0;
+  --text3: #55556a;
+  --green: #00d4a0;
+  --green2: #00a880;
+  --red: #ff5566;
+  --red2: #cc3344;
+  --gold: #f0b429;
+  --blue: #4488ff;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Heebo', sans-serif;
+  --r: 10px;
+  --r2: 16px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--sans); }
+body { display: flex; flex-direction: column; }
+
+/* NAV */
+.topbar { 
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 0.5px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg);
+}
+.topbar-title { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+.topbar-right { display: flex; gap: 8px; align-items: center; }
+.icon-btn {
+  background: var(--bg3); border: 0.5px solid var(--border2);
+  border-radius: 8px; width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 15px; color: var(--text2);
+  transition: background .15s;
+}
+.icon-btn:active { background: var(--bg2); }
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: pulse 2s infinite;
+}
+.live-dot.off { background: var(--text3); box-shadow: none; animation: none; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+
+/* SCROLL AREA */
+.scroll-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.scroll-area::-webkit-scrollbar { display: none; }
+
+/* BOTTOM NAV */
+.bottom-nav {
+  display: flex; background: var(--bg2);
+  border-top: 0.5px solid var(--border);
+  flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 10px 0 8px; cursor: pointer; color: var(--text3);
+  font-size: 10px; gap: 3px; transition: color .15s;
+}
+.nav-item.active { color: var(--green); }
+.nav-item svg { width: 20px; height: 20px; }
+
+/* TOTAL CARD */
+.total-card {
+  margin: 12px;
+  background: var(--bg2);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r2);
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.total-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--green), var(--blue));
+}
+.total-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+.total-ils { font-family: var(--mono); font-size: 28px; font-weight: 500; letter-spacing: -0.5px; }
+.total-usd { font-family: var(--mono); font-size: 14px; color: var(--text2); margin-top: 2px; }
+.total-row { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+.total-pill {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--bg3); border-radius: 6px;
+  padding: 4px 10px; font-size: 12px; font-family: var(--mono);
+}
+.total-pill .lbl { color: var(--text3); font-size: 10px; }
+
+/* RATE BAR */
+.rate-bar {
+  margin: 0 12px 12px;
+  background: var(--bg3);
+  border-radius: var(--r);
+  padding: 8px 12px;
+  display: flex; gap: 16px; flex-wrap: wrap;
+  font-family: var(--mono); font-size: 11px; color: var(--text2);
+}
+.rate-bar span { color: var(--text); }
+
+/* PORTFOLIO DOTS NAV */
+.portfolio-nav {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 12px 8px;
+}
+.p-dots { display: flex; gap: 5px; flex: 1; justify-content: center; }
+.p-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--text3); cursor: pointer; transition: all .2s;
+}
+.p-dot.active { width: 16px; border-radius: 3px; background: var(--green); }
+.nav-arrow {
+  background: var(--bg3); border: 0.5px solid var(--border2);
+  border-radius: 8px; padding: 6px 12px; cursor: pointer;
+  color: var(--text2); font-size: 15px;
+}
+.nav-arrow:active { background: var(--bg2); }
+
+/* PORTFOLIO CARD */
+.port-card {
+  margin: 0 12px 12px;
+  background: var(--bg2);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r2);
+  overflow: hidden;
+}
+.port-header {
+  padding: 14px 16px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  border-bottom: 0.5px solid var(--border);
+  cursor: pointer;
+}
+.port-name-row { display: flex; align-items: center; gap: 8px; }
+.port-color-bar { width: 3px; height: 20px; border-radius: 2px; flex-shrink: 0; }
+.port-name { font-size: 15px; font-weight: 500; }
+.port-count { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.port-nums { text-align: left; }
+.port-total { font-family: var(--mono); font-size: 16px; font-weight: 500; }
+.port-gain { font-family: var(--mono); font-size: 12px; margin-top: 2px; }
+.port-day { font-family: var(--mono); font-size: 11px; color: var(--text2); }
+
+/* STOCK TABLE */
+.stock-tbl { width: 100%; border-collapse: collapse; }
+.stock-tbl thead { background: var(--bg3); }
+.stock-tbl th {
+  font-size: 10px; color: var(--text3); font-weight: 400;
+  padding: 6px 10px; text-align: left;
+  letter-spacing: 0.5px; text-transform: uppercase;
+}
+.stock-tbl th:last-child { text-align: left; }
+.stock-tbl td {
+  padding: 10px 10px; font-size: 13px;
+  border-top: 0.5px solid var(--border);
+  vertical-align: middle;
+}
+.stock-tbl tr:active { background: var(--bg3); }
+.s-ticker { font-weight: 700; font-size: 13px; font-family: var(--mono); }
+.s-name { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.badge {
+  display: inline-block; font-size: 9px; padding: 1px 4px;
+  border-radius: 3px; margin-right: 4px; font-family: var(--mono);
+  vertical-align: middle;
+}
+.il { background: rgba(0,212,160,0.15); color: var(--green); }
+.us { background: rgba(68,136,255,0.15); color: var(--blue); }
+.uk { background: rgba(240,180,41,0.15); color: var(--gold); }
+.green { color: var(--green); }
+.red { color: var(--red); }
+.mono { font-family: var(--mono); }
+.port-actions {
+  padding: 10px 16px;
+  display: flex; gap: 8px;
+  border-bottom: 0.5px solid var(--border);
+}
+.add-form {
+  padding: 12px 16px;
+  border-bottom: 0.5px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.add-form input, .add-form select {
+  background: var(--bg3); border: 0.5px solid var(--border2);
+  border-radius: 8px; padding: 9px 12px; font-size: 13px;
+  color: var(--text); font-family: var(--sans); width: 100%;
+  outline: none;
+}
+.add-form input:focus, .add-form select:focus {
+  border-color: var(--green);
+}
+.add-form input::placeholder { color: var(--text3); }
+.add-form select option { background: var(--bg3); }
+.row { display: flex; gap: 8px; }
+.row input, .row select { flex: 1; }
+.btn-primary {
+  background: var(--green); color: #000; border: none;
+  border-radius: 8px; padding: 10px 16px; font-size: 13px;
+  font-weight: 700; cursor: pointer; font-family: var(--sans);
+}
+.btn-primary:active { background: var(--green2); }
+.btn-sm {
+  background: var(--bg3); border: 0.5px solid var(--border2);
+  border-radius: 8px; padding: 6px 12px; font-size: 12px;
+  cursor: pointer; color: var(--text2); font-family: var(--sans);
+}
+.btn-sm:active { background: var(--bg2); }
+.del-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text3); font-size: 16px; padding: 0 4px;
+  line-height: 1;
+}
+.del-btn:active { color: var(--red); }
+.no-stocks {
+  padding: 28px; text-align: center;
+  color: var(--text3); font-size: 13px;
+}
+
+/* ALERTS */
+.section { margin: 0 12px 12px; }
+.section-card {
+  background: var(--bg2); border: 0.5px solid var(--border);
+  border-radius: var(--r2); overflow: hidden;
+}
+.section-header {
+  padding: 12px 16px; display: flex; justify-content: space-between;
+  align-items: center; border-bottom: 0.5px solid var(--border);
+}
+.section-title { font-size: 14px; font-weight: 500; }
+.alert-item {
+  padding: 11px 16px; display: flex; justify-content: space-between;
+  align-items: center; border-top: 0.5px solid var(--border);
+  font-size: 13px;
+}
+.alert-item:first-child { border-top: none; }
+.alert-ticker { font-family: var(--mono); font-weight: 700; }
+.alert-detail { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.alert-triggered { background: rgba(0,212,160,0.05); }
+
+/* SUMMARY */
+.summary-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  padding: 12px;
+}
+.sum-card {
+  background: var(--bg2); border: 0.5px solid var(--border);
+  border-radius: var(--r); padding: 12px;
+  border-top: 2px solid transparent;
+}
+.sum-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+.sum-name { font-size: 12px; font-weight: 500; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sum-val { font-family: var(--mono); font-size: 16px; font-weight: 500; }
+.sum-sub { font-family: var(--mono); font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+/* SETTINGS */
+.settings-section { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.settings-row {
+  background: var(--bg2); border: 0.5px solid var(--border);
+  border-radius: var(--r); padding: 14px 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 14px;
+}
+.settings-row .lbl { color: var(--text2); font-size: 12px; margin-top: 2px; }
+.api-input {
+  background: var(--bg3); border: 0.5px solid var(--border2);
+  border-radius: 8px; padding: 9px 12px; font-size: 12px;
+  color: var(--text); font-family: var(--mono); width: 100%;
+  outline: none; direction: ltr;
+}
+.api-input:focus { border-color: var(--green); }
+
+/* LOADING */
+.spin {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* SWIPE HINT */
+.swipe-hint {
+  text-align: center; color: var(--text3); font-size: 11px;
+  padding: 4px; letter-spacing: 0.3px;
+}
+
+/* NOTIFICATION BANNER */
+.notif-banner {
+  position: fixed; top: 60px; left: 12px; right: 12px;
+  background: var(--bg3); border: 0.5px solid var(--green);
+  border-radius: var(--r); padding: 10px 14px;
+  font-size: 13px; color: var(--text);
+  z-index: 999; transform: translateY(-80px); opacity: 0;
+  transition: all .3s;
+}
+.notif-banner.show { transform: translateY(0); opacity: 1; }
+
+/* CHEVRON */
+.chevron { font-size: 11px; color: var(--text3); transition: transform .2s; margin-right: 4px; }
+.chevron.open { transform: rotate(180deg); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">📊 תיקי מניות</div>
+  <div class="topbar-right">
+    <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
+    <div class="icon-btn" onclick="manualRefresh()" title="רענן">⟳</div>
+    <div class="icon-btn" onclick="switchTab('settings')" title="הגדרות">⚙</div>
+  </div>
+</div>
+
+<div class="scroll-area" id="main-scroll">
+
+  <!-- PORTFOLIOS TAB -->
+  <div id="tab-portfolios">
+    <div class="total-card" id="total-card">
+      <div class="total-label">סה״כ כל התיקים</div>
+      <div class="total-ils mono" id="t-ils">טוען...</div>
+      <div class="total-usd mono" id="t-usd"></div>
+      <div class="total-row">
+        <div class="total-pill">
+          <span class="lbl">יומי</span>
+          <span id="t-day">—</span>
+        </div>
+        <div class="total-pill">
+          <span class="lbl">סה״כ</span>
+          <span id="t-gain">—</span>
+        </div>
+        <div class="total-pill">
+          <span class="lbl">תשואה</span>
+          <span id="t-pct">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="rate-bar" id="rate-bar">
+      <span class="spin">⟳</span> טוען שערים...
+    </div>
+
+    <div class="portfolio-nav">
+      <button class="nav-arrow" onclick="prevPort()">‹</button>
+      <div class="p-dots" id="p-dots"></div>
+      <button class="nav-arrow" onclick="nextPort()">›</button>
+    </div>
+    <div class="swipe-hint">החלק לתיק הבא ←</div>
+    <div id="port-view" style="touch-action: pan-y;"></div>
+  </div>
+
+  <!-- ALERTS TAB -->
+  <div id="tab-alerts" style="display:none;">
+    <div class="section" style="margin-top:12px;">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="section-title">🔔 התראות מחיר</span>
+          <button class="btn-sm" onclick="toggleAlertForm()">+ הוסף</button>
+        </div>
+        <div class="add-form" id="alert-add-form" style="display:none;">
+          <input type="text" id="al-ticker" placeholder="סימול מנייה (AAPL, TEVA.TA)" style="direction:ltr; text-transform:uppercase;">
+          <div class="row">
+            <select id="al-dir">
+              <option value="above">▲ מעל מחיר</option>
+              <option value="below">▼ מתחת למחיר</option>
+            </select>
+            <input type="number" id="al-price" placeholder="מחיר יעד" style="direction:ltr;">
+          </div>
+          <input type="text" id="al-note" placeholder="הערה (אופציונלי)">
+          <button class="btn-primary" onclick="addAlert()">הוסף התראה</button>
+        </div>
+        <div id="alerts-list"></div>
+      </div>
+    </div>
+    <div class="section">
+      <div style="font-size:12px; color:var(--text3); line-height:1.6; padding:8px 4px;">
+        💡 ההתראות פועלות כאשר האפליקציה פתוחה. לקבלת התראות ברקע, התקן את האפליקציה (PWA) ואפשר התראות.
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY TAB -->
+  <div id="tab-summary" style="display:none;">
+    <div class="summary-grid" id="summary-grid"></div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div id="tab-settings" style="display:none;">
+    <div class="settings-section">
+      <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+        <div>
+          <div style="font-size:14px; font-weight:500;">Finnhub API Key</div>
+          <div class="lbl">לנתוני מניות ארה״ב בזמן אמת</div>
+        </div>
+        <input type="text" class="api-input" id="api-key-input" placeholder="הדבק את ה-API key שלך">
+        <button class="btn-primary" onclick="saveApiKey()" style="width:100%;">שמור</button>
+      </div>
+      <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+        <div>
+          <div style="font-size:14px; font-weight:500;">הוסף תיק חדש</div>
+          <div class="lbl">ניתן לנהל עד 8 תיקים</div>
+        </div>
+        <input type="text" id="new-port-name" placeholder="שם התיק החדש" style="background:var(--bg3);border:0.5px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);width:100%;outline:none;">
+        <div class="row">
+          <select id="new-port-color" style="background:var(--bg3);border:0.5px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);width:100%;outline:none;">
+            <option value="#00d4a0">ירוק</option>
+            <option value="#4488ff">כחול</option>
+            <option value="#f0b429">זהב</option>
+            <option value="#ff5566">אדום</option>
+            <option value="#cc88ff">סגול</option>
+          </select>
+          <button class="btn-primary" onclick="addPortfolio()" style="white-space:nowrap;">הוסף</button>
+        </div>
+      </div>
+      <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+        <div>
+          <div style="font-size:14px; font-weight:500;">התקנה כ-PWA</div>
+          <div class="lbl">התקן על מסך הבית של הגלקסי</div>
+        </div>
+        <button class="btn-sm" id="install-btn" onclick="installPWA()" style="width:100%; padding:10px;">📲 התקן על מסך הבית</button>
+      </div>
+      <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+        <div>
+          <div style="font-size:14px; font-weight:500;">גיבוי ושחזור</div>
+          <div class="lbl">ייצא את כל התיקים, המניות וההתראות לקובץ JSON</div>
+        </div>
+        <div style="display:flex; gap:8px; width:100%;">
+          <button class="btn-primary" onclick="exportData()" style="flex:1;">⬇ ייצא גיבוי</button>
+          <button class="btn-sm" onclick="document.getElementById('import-file').click()" style="flex:1; padding:10px;">⬆ ייבא גיבוי</button>
+        </div>
+        <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(event)">
+        <div id="backup-status" style="font-size:11px; color:var(--text3);"></div>
+      </div>
+      <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+        <div>
+          <div style="font-size:14px; font-weight:500;">גרסה</div>
+          <div class="lbl">Stock Portfolio Tracker v1.1</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <div class="nav-item active" id="nav-portfolios" onclick="switchTab('portfolios')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    תיקים
+  </div>
+  <div class="nav-item" id="nav-alerts" onclick="switchTab('alerts')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    התראות
+  </div>
+  <div class="nav-item" id="nav-summary" onclick="switchTab('summary')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    סיכום
+  </div>
+  <div class="nav-item" id="nav-settings" onclick="switchTab('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    הגדרות
+  </div>
+</div>
+
+<div class="notif-banner" id="notif-banner"></div>
+
+<script>
+const STORAGE_KEY = 'portfolioApp_v2';
+const DEFAULT_API_KEY = '';
+
+let state = {
+  apiKey: DEFAULT_API_KEY,
+  portfolios: [
+    { id:1, name:'תיק 1 — ישראלי', color:'#00d4a0', expanded:true, stocks:[
+      { ticker:'TEVA.TA', name:'טבע', qty:100, cost:42.50, market:'IL' },
+      { ticker:'NICE.TA', name:'נייס', qty:20, cost:1850, market:'IL' },
+      { ticker:'CHKP.TA', name:'צ׳ק פוינט', qty:15, cost:1620, market:'IL' }
+    ]},
+    { id:2, name:'תיק 2 — ארה״ב', color:'#4488ff', expanded:true, stocks:[
+      { ticker:'AAPL', name:'Apple', qty:30, cost:175, market:'US' },
+      { ticker:'MSFT', name:'Microsoft', qty:25, cost:380, market:'US' },
+      { ticker:'NVDA', name:'Nvidia', qty:10, cost:480, market:'US' }
+    ]},
+    { id:3, name:'תיק 3 — לונדון', color:'#f0b429', expanded:true, stocks:[
+      { ticker:'SHEL.L', name:'Shell', qty:200, cost:2650, market:'UK' },
+      { ticker:'BP.L', name:'BP', qty:300, cost:480, market:'UK' }
+    ]},
+    { id:4, name:'תיק 4 — מעורב', color:'#ff5566', expanded:true, stocks:[
+      { ticker:'GOOGL', name:'Alphabet', qty:15, cost:140, market:'US' },
+      { ticker:'AMZN', name:'Amazon', qty:20, cost:178, market:'US' }
+    ]}
+  ],
+  alerts: [],
+  fx: { usdils: 3.72, gbpils: 4.71 },
+  prices: {},
+  currentPort: 0,
+  editMode: false,
+  currentTab: 'portfolios',
+  wsConnected: false
+};
+
+let ws = null;
+let wsReconnectTimer = null;
+let deferredInstall = null;
+let alertFormOpen = false;
+
+function loadState() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) {
+      const parsed = JSON.parse(s);
+      state.portfolios = parsed.portfolios || state.portfolios;
+      state.alerts = parsed.alerts || [];
+      state.apiKey = parsed.apiKey || '';
+    }
+  } catch(e) {}
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      portfolios: state.portfolios,
+      alerts: state.alerts,
+      apiKey: state.apiKey
+    }));
+  } catch(e) {}
+}
+
+// FX rates
+async function fetchFX() {
+  try {
+    const r = await fetch('https://api.frankfurter.app/latest?from=USD&to=ILS,GBP');
+    const d = await r.json();
+    if (d.rates) {
+      state.fx.usdils = d.rates.ILS || 3.72;
+      state.fx.gbpils = (d.rates.ILS / (d.rates.GBP || 0.79)) || 4.71;
+    }
+  } catch(e) {}
+  renderRateBar();
+}
+
+function renderRateBar() { /* overridden below after trading-hours logic */ }
+
+// Finnhub WebSocket for real-time US prices
+function connectWS() {
+  if (!state.apiKey) {
+    setLiveDot(false);
+    document.getElementById('live-dot').title = 'חסר API key — הגדרות';
+    return;
+  }
+  if (ws) { ws.close(); ws = null; }
+  
+  const usTickers = [];
+  state.portfolios.forEach(p => p.stocks.forEach(s => {
+    if (s.market === 'US') usTickers.push(s.ticker);
+  }));
+  if (!usTickers.length) return;
+
+  try {
+    ws = new WebSocket(`wss://ws.finnhub.io?token=${state.apiKey}`);
+    ws.onopen = () => {
+      state.wsConnected = true;
+      setLiveDot(true);
+      usTickers.forEach(t => ws.send(JSON.stringify({ type:'subscribe', symbol: t })));
+    };
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'trade' && msg.data) {
+          msg.data.forEach(trade => {
+            const sym = trade.s;
+            if (!state.prices[sym]) state.prices[sym] = {};
+            state.prices[sym].price = trade.p;
+            state.prices[sym].t = trade.t;
+            if (!state.prices[sym].prev) state.prices[sym].prev = trade.p;
+          });
+          debounceRender();
+          checkAlerts();
+        }
+      } catch(err) {}
+    };
+    ws.onerror = () => { state.wsConnected = false; setLiveDot(false); };
+    ws.onclose = () => {
+      state.wsConnected = false; setLiveDot(false);
+      wsReconnectTimer = setTimeout(connectWS, 15000);
+    };
+  } catch(e) { setLiveDot(false); }
+}
+
+function setLiveDot(on) {
+  const d = document.getElementById('live-dot');
+  d.className = 'live-dot' + (on ? '' : ' off');
+  d.title = on ? 'מחובר — נתונים חיים' : 'לא מחובר';
+}
+
+// REST fallback for non-US or missing prices
+async function fetchREST(ticker) {
+  try {
+    // Try Yahoo Finance as proxy
+    const sym = encodeURIComponent(ticker);
+    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=2d`);
+    const d = await r.json();
+    const res = d.result || d.chart?.result;
+    if (!res || !res[0]) return null;
+    const meta = res[0].meta;
+    const price = meta.regularMarketPrice;
+    const prev = meta.previousClose || meta.chartPreviousClose;
+    const cur = meta.currency;
+    return { price, prev, currency: cur };
+  } catch(e) { return null; }
+}
+
+async function fetchAllPrices() {
+  const tasks = [];
+  state.portfolios.forEach(p => p.stocks.forEach(s => {
+    if (!state.prices[s.ticker] || !state.prices[s.ticker].price) {
+      tasks.push((async () => {
+        const d = await fetchREST(s.ticker);
+        if (d) {
+          state.prices[s.ticker] = {
+            price: d.price,
+            prev: d.prev || d.price,
+            currency: d.currency,
+            t: Date.now()
+          };
+        }
+      })());
+    }
+  }));
+  await Promise.all(tasks);
+}
+
+// Currency conversion
+function toILS(price, currency, market) {
+  if (!currency) {
+    if (market === 'IL') return price;
+    if (market === 'US') return price * state.fx.usdils;
+    if (market === 'UK') return price * state.fx.gbpils / 100;
+  }
+  if (['ILS','ILA'].includes(currency)) return price;
+  if (currency === 'USD') return price * state.fx.usdils;
+  if (currency === 'GBP') return price * state.fx.gbpils;
+  if (['GBp','GBX'].includes(currency)) return price * state.fx.gbpils / 100;
+  return price;
+}
+
+function fmtILS(v) {
+  return '₪' + Math.round(v).toLocaleString('he-IL');
+}
+function fmtUSD(v) {
+  return '$' + Math.round(v).toLocaleString('en-US');
+}
+function sign(v) { return v >= 0 ? '+' : ''; }
+function cls(v) { return v >= 0 ? 'green' : 'red'; }
+function arrow(v) { return v >= 0 ? '▲' : '▼'; }
+
+// Render debounce
+let renderTimer = null;
+function debounceRender() {
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(() => renderPortfolioView(), 200);
+}
+
+function renderAll() {
+  renderTotals();
+  renderPortfolioView();
+  renderSummary();
+  renderAlerts();
+}
+
+function computePortfolio(p) {
+  let totalILS = 0, costILS = 0, dayILS = 0;
+  p.stocks.forEach(s => {
+    const pd = state.prices[s.ticker];
+    const price = pd?.price;
+    const prev = pd?.prev || price;
+    const cur = pd?.currency;
+    if (price != null) {
+      const val = toILS(price * s.qty, cur, s.market);
+      const prevVal = toILS((prev || price) * s.qty, cur, s.market);
+      const cost = toILS(s.cost * s.qty, null, s.market);
+      s._valILS = val;
+      s._costILS = cost;
+      s._dayILS = val - prevVal;
+      s._price = price;
+      totalILS += val; costILS += cost; dayILS += val - prevVal;
+    } else {
+      const est = toILS(s.cost * s.qty, null, s.market);
+      s._valILS = est; s._costILS = est; s._dayILS = 0; s._price = null;
+      totalILS += est; costILS += est;
+    }
+  });
+  return { totalILS, costILS, dayILS, gainILS: totalILS - costILS };
+}
+
+function renderTotals() {
+  let tot = 0, cost = 0, day = 0;
+  state.portfolios.forEach(p => {
+    const c = computePortfolio(p);
+    tot += c.totalILS; cost += c.costILS; day += c.dayILS;
+  });
+  const gain = tot - cost;
+  const pct = cost > 0 ? ((gain/cost)*100) : 0;
+  document.getElementById('t-ils').textContent = fmtILS(tot);
+  document.getElementById('t-usd').textContent = fmtUSD(tot / state.fx.usdils);
+  document.getElementById('t-day').innerHTML = `<span class="${cls(day)}">${sign(day)}${fmtILS(day)}</span>`;
+  document.getElementById('t-gain').innerHTML = `<span class="${cls(gain)}">${sign(gain)}${fmtILS(gain)}</span>`;
+  document.getElementById('t-pct').innerHTML = `<span class="${cls(pct)}">${sign(pct)}${pct.toFixed(1)}%</span>`;
+}
+
+function renderDots() {
+  const el = document.getElementById('p-dots');
+  el.innerHTML = state.portfolios.map((p,i) =>
+    `<div class="p-dot ${i===state.currentPort?'active':''}" onclick="gotoPort(${i})"></div>`
+  ).join('');
+}
+
+function renderPortfolioView() {
+  renderTotals();
+  renderDots();
+  const p = state.portfolios[state.currentPort];
+  if (!p) return;
+  const c = computePortfolio(p);
+  const gainPct = c.costILS > 0 ? ((c.gainILS/c.costILS)*100) : 0;
+
+  let addFormHTML = '';
+  if (state.editMode) {
+    addFormHTML = `<div class="add-form">
+      <div class="row">
+        <input type="text" id="ns-ticker" placeholder="סימול (AAPL)" style="direction:ltr;text-transform:uppercase;">
+        <input type="text" id="ns-name" placeholder="שם חברה">
+      </div>
+      <div class="row">
+        <input type="number" id="ns-qty" placeholder="כמות">
+        <input type="number" id="ns-cost" placeholder="עלות / מניה" style="direction:ltr;">
+        <select id="ns-market">
+          <option value="IL">🇮🇱 IL</option>
+          <option value="US">🇺🇸 US</option>
+          <option value="UK">🇬🇧 UK</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="addStockToPort(${state.currentPort})">➕ הוסף מנייה</button>
+    </div>`;
+  }
+
+  let stockRows = '';
+  if (p.stocks.length === 0) {
+    stockRows = `<tr><td colspan="5" class="no-stocks">לחץ על "+ ערוך" להוספת מניות</td></tr>`;
+  } else {
+    stockRows = p.stocks.map((s, si) => {
+      const priceStr = s._price != null
+        ? s._price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+        : '—';
+      const dayHTML = s._dayILS != null
+        ? `<span class="${cls(s._dayILS)}">${arrow(s._dayILS)}${fmtILS(Math.abs(s._dayILS))}</span>`
+        : '<span style="color:var(--text3)">—</span>';
+      const totalGain = (s._valILS || 0) - (s._costILS || 0);
+      const totalPct = s._costILS > 0 ? ((totalGain/s._costILS)*100).toFixed(1) : '0.0';
+      const delBtn = state.editMode
+        ? `<button class="del-btn" onclick="removeStock(${state.currentPort},${si})">✕</button>`
+        : '';
+      return `<tr class="stock-row">
+        <td>
+          <div class="s-ticker"><span class="badge ${s.market.toLowerCase()}">${s.market}</span>${s.ticker.replace('.TA','').replace('.L','')}</div>
+          <div class="s-name">${s.name}</div>
+        </td>
+        <td class="mono" style="font-size:12px;">
+          ${s.qty.toLocaleString()}<br>
+          <span style="color:var(--text3);font-size:10px;">${priceStr}</span>
+        </td>
+        <td style="font-size:12px;">${dayHTML}</td>
+        <td class="mono ${cls(totalGain)}" style="font-size:12px;">
+          ${sign(totalGain)}${fmtILS(Math.abs(totalGain))}<br>
+          <span style="font-size:10px;">${totalPct}%</span>
+        </td>
+        <td class="mono" style="font-size:12px;">${fmtILS(s._valILS||s._costILS||0)}${delBtn}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const renameBtn = state.editMode
+    ? `<button class="btn-sm" onclick="renamePort(${state.currentPort})" style="margin-right:4px;">✎ שנה שם</button>
+       <button class="btn-sm" style="color:var(--red);border-color:var(--red);" onclick="deletePort(${state.currentPort})">🗑 מחק תיק</button>`
+    : '';
+
+  document.getElementById('port-view').innerHTML = `
+    <div class="port-card">
+      <div class="port-header">
+        <div>
+          <div class="port-name-row">
+            <div class="port-color-bar" style="background:${p.color}"></div>
+            <div>
+              <div class="port-name">${p.name}</div>
+              <div class="port-count">${p.stocks.length} מניות</div>
+            </div>
+          </div>
+        </div>
+        <div class="port-nums">
+          <div class="port-total">${fmtILS(c.totalILS)}</div>
+          <div class="port-gain ${cls(c.gainILS)}">${sign(c.gainILS)}${fmtILS(c.gainILS)} (${gainPct.toFixed(1)}%)</div>
+          <div class="port-day ${cls(c.dayILS)}">יומי: ${sign(c.dayILS)}${fmtILS(c.dayILS)}</div>
+        </div>
+      </div>
+      ${state.editMode ? `<div class="port-actions">${renameBtn}</div>` : ''}
+      ${addFormHTML}
+      <table class="stock-tbl">
+        <thead><tr>
+          <th>מנייה</th><th>כמות</th><th>יומי</th><th>רווח</th><th>שווי ₪</th>
+        </tr></thead>
+        <tbody>${stockRows}</tbody>
+      </table>
+    </div>
+    <div style="height:8px;"></div>
+  `;
+}
+
+function renderSummary() {
+  const grid = document.getElementById('summary-grid');
+  grid.innerHTML = state.portfolios.map(p => {
+    const c = computePortfolio(p);
+    const pct = c.costILS > 0 ? ((c.gainILS/c.costILS)*100) : 0;
+    return `<div class="sum-card" style="border-top-color:${p.color}">
+      <div class="sum-label">תיק</div>
+      <div class="sum-name">${p.name}</div>
+      <div class="sum-val">${fmtILS(c.totalILS)}</div>
+      <div class="sum-sub">${fmtUSD(c.totalILS/state.fx.usdils)}</div>
+      <div style="margin-top:8px;">
+        <div class="sum-label">רווח כולל</div>
+        <div class="sum-val ${cls(c.gainILS)}" style="font-size:14px;">${sign(c.gainILS)}${fmtILS(c.gainILS)}</div>
+        <div class="sum-sub ${cls(pct)}">${sign(pct)}${pct.toFixed(1)}%</div>
+      </div>
+      <div style="margin-top:6px;">
+        <div class="sum-label">יומי</div>
+        <div class="${cls(c.dayILS)} mono" style="font-size:13px;">${sign(c.dayILS)}${fmtILS(c.dayILS)}</div>
+      </div>
+      <div style="margin-top:6px;">
+        <div class="sum-label">מניות</div>
+        <div class="mono" style="font-size:13px;">${p.stocks.length}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAlerts() {
+  const el = document.getElementById('alerts-list');
+  if (!state.alerts.length) {
+    el.innerHTML = '<div class="no-stocks">אין התראות פעילות</div>';
+    return;
+  }
+  el.innerHTML = state.alerts.map((a, i) => {
+    const pd = state.prices[a.ticker];
+    const cur = pd?.price;
+    const status = cur
+      ? `<span style="color:var(--text2);font-size:10px;">מחיר נוכחי: ${cur.toFixed(2)}</span>`
+      : '';
+    return `<div class="alert-item ${a.triggered?'alert-triggered':''}">
+      <div>
+        <div class="alert-ticker">${a.ticker}
+          <span class="badge ${a.dir==='above'?'us':'il'}" style="font-size:9px;">${a.dir==='above'?'▲':'▼'} ${a.price}</span>
+        </div>
+        <div class="alert-detail">${a.note||''} ${status}</div>
+      </div>
+      <button class="del-btn" onclick="removeAlert(${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// Actions
+function switchTab(tab) {
+  ['portfolios','alerts','summary','settings'].forEach(t => {
+    document.getElementById(`tab-${t}`).style.display = t === tab ? '' : 'none';
+    const n = document.getElementById(`nav-${t}`);
+    if (n) n.className = 'nav-item' + (t === tab ? ' active' : '');
+  });
+  state.currentTab = tab;
+  if (tab === 'summary') renderSummary();
+  if (tab === 'settings') {
+    document.getElementById('api-key-input').value = state.apiKey || '';
+  }
+}
+
+function prevPort() { gotoPort((state.currentPort - 1 + state.portfolios.length) % state.portfolios.length); }
+function nextPort() { gotoPort((state.currentPort + 1) % state.portfolios.length); }
+function gotoPort(i) { state.currentPort = i; renderPortfolioView(); }
+
+function toggleEdit() {
+  state.editMode = !state.editMode;
+  document.querySelector('.icon-btn[onclick="toggleEdit()"]').textContent = state.editMode ? '✓' : '✎';
+  renderPortfolioView();
+}
+
+function addStockToPort(pIdx) {
+  const ticker = document.getElementById('ns-ticker')?.value.trim().toUpperCase();
+  const name = document.getElementById('ns-name')?.value.trim();
+  const qty = parseFloat(document.getElementById('ns-qty')?.value);
+  const cost = parseFloat(document.getElementById('ns-cost')?.value);
+  const market = document.getElementById('ns-market')?.value;
+  if (!ticker || !qty || !cost) { showNotif('יש למלא סימול, כמות ועלות'); return; }
+  state.portfolios[pIdx].stocks.push({ ticker, name: name || ticker, qty, cost, market: market || 'US' });
+  saveState();
+  fetchAllPrices().then(() => renderAll());
+  if (market === 'US' && ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({ type:'subscribe', symbol: ticker }));
+  }
+}
+
+function removeStock(pIdx, sIdx) {
+  state.portfolios[pIdx].stocks.splice(sIdx, 1);
+  saveState();
+  renderAll();
+}
+
+function addPortfolio() {
+  const name = document.getElementById('new-port-name').value.trim();
+  const color = document.getElementById('new-port-color').value;
+  if (!name) { showNotif('הזן שם לתיק'); return; }
+  state.portfolios.push({ id: Date.now(), name, color, expanded: true, stocks: [] });
+  state.currentPort = state.portfolios.length - 1;
+  saveState();
+  document.getElementById('new-port-name').value = '';
+  switchTab('portfolios');
+  renderAll();
+  showNotif(`תיק "${name}" נוסף!`);
+}
+
+function renamePort(pIdx) {
+  const n = prompt('שם חדש:', state.portfolios[pIdx].name);
+  if (n) { state.portfolios[pIdx].name = n; saveState(); renderPortfolioView(); }
+}
+
+function deletePort(pIdx) {
+  if (!confirm(`למחוק את "${state.portfolios[pIdx].name}"?`)) return;
+  state.portfolios.splice(pIdx, 1);
+  if (state.currentPort >= state.portfolios.length) state.currentPort = Math.max(0, state.portfolios.length - 1);
+  saveState();
+  renderAll();
+}
+
+function toggleAlertForm() {
+  alertFormOpen = !alertFormOpen;
+  document.getElementById('alert-add-form').style.display = alertFormOpen ? '' : 'none';
+}
+
+function addAlert() {
+  const ticker = document.getElementById('al-ticker').value.trim().toUpperCase();
+  const dir = document.getElementById('al-dir').value;
+  const price = parseFloat(document.getElementById('al-price').value);
+  const note = document.getElementById('al-note').value.trim();
+  if (!ticker || !price) { showNotif('יש למלא סימול ומחיר יעד'); return; }
+  state.alerts.push({ ticker, dir, price, note, triggered: false });
+  saveState();
+  renderAlerts();
+  document.getElementById('al-ticker').value = '';
+  document.getElementById('al-price').value = '';
+  document.getElementById('al-note').value = '';
+  if (Notification.permission === 'default') Notification.requestPermission();
+}
+
+function removeAlert(i) { state.alerts.splice(i, 1); saveState(); renderAlerts(); }
+
+function checkAlerts() {
+  state.alerts.forEach((a, i) => {
+    const pd = state.prices[a.ticker];
+    if (!pd?.price) return;
+    const triggered = a.dir === 'above' ? pd.price >= a.price : pd.price <= a.price;
+    if (triggered && !a.triggered) {
+      a.triggered = true;
+      saveState();
+      const msg = `${a.ticker}: מחיר ${pd.price.toFixed(2)} ${a.dir==='above'?'עלה מעל':'ירד מתחת ל-'}${a.price}`;
+      showNotif('🔔 ' + msg);
+      if (Notification.permission === 'granted') {
+        new Notification('התראת מנייה', { body: msg });
+      }
+      renderAlerts();
+    }
+  });
+}
+
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  state.apiKey = key;
+  saveState();
+  showNotif('API key נשמר!');
+  connectWS();
+  fetchAllPrices().then(() => renderAll());
+}
+
+function showNotif(msg) {
+  const el = document.getElementById('notif-banner');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+async function manualRefresh() {
+  const btn = document.querySelector('.icon-btn[onclick="manualRefresh()"]');
+  if (btn) btn.textContent = '…';
+  await fetchFX();
+  if (anyMarketOpen()) {
+    state.portfolios.forEach(p => p.stocks.forEach(s => {
+      if (state.prices[s.ticker]) delete state.prices[s.ticker].price;
+    }));
+    await smartRefresh();
+    showNotif('מחירים עודכנו ✓');
+  } else {
+    renderAll();
+    showNotif(`⏸ הבורסות סגורות — מוצג מחיר אחרון`);
+  }
+  if (btn) btn.textContent = '⟳';
+}
+
+// Swipe gesture
+let touchStartX = 0;
+document.getElementById('port-view').addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+document.getElementById('port-view').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(dx) > 50) { dx < 0 ? nextPort() : prevPort(); }
+}, { passive: true });
+
+// PWA install
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredInstall = e;
+  const btn = document.getElementById('install-btn');
+  if (btn) btn.style.background = 'var(--green)';
+});
+function exportData() {
+  const backup = {
+    version: '1.1',
+    exportedAt: new Date().toISOString(),
+    portfolios: state.portfolios,
+    alerts: state.alerts,
+    apiKey: state.apiKey
+  };
+  const json = JSON.stringify(backup, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toLocaleDateString('he-IL').replace(/\//g,'-');
+  a.href = url;
+  a.download = `תיקי-מניות-גיבוי-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('backup-status').textContent =
+    `✓ גיבוי יוצא בהצלחה — ${new Date().toLocaleTimeString('he-IL')}`;
+  showNotif('קובץ גיבוי הורד ✓');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const backup = JSON.parse(e.target.result);
+      if (!backup.portfolios || !Array.isArray(backup.portfolios)) {
+        throw new Error('קובץ לא תקין');
+      }
+      const count = backup.portfolios.reduce((n, p) => n + (p.stocks?.length || 0), 0);
+      if (!confirm(`נמצאו ${backup.portfolios.length} תיקים ו-${count} מניות.\nהייבוא יחליף את הנתונים הנוכחיים. להמשיך?`)) return;
+      state.portfolios = backup.portfolios;
+      state.alerts = backup.alerts || [];
+      if (backup.apiKey) state.apiKey = backup.apiKey;
+      state.currentPort = 0;
+      saveState();
+      document.getElementById('api-key-input').value = state.apiKey || '';
+      const status = document.getElementById('backup-status');
+      status.style.color = 'var(--green)';
+      status.textContent = `✓ יובאו ${backup.portfolios.length} תיקים (גובה: ${backup.exportedAt?.slice(0,10) || 'לא ידוע'})`;
+      showNotif(`יובאו ${backup.portfolios.length} תיקים ✓`);
+      state.prices = {};
+      fetchAllPrices().then(() => renderAll());
+    } catch(err) {
+      document.getElementById('backup-status').style.color = 'var(--red)';
+      document.getElementById('backup-status').textContent = '✗ שגיאה בקריאת הקובץ — ודא שזה קובץ גיבוי תקין';
+      showNotif('שגיאה בייבוא ✗');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+
+  if (deferredInstall) { deferredInstall.prompt(); }
+  else { showNotif('פתח בדפדפן Chrome/Samsung לאפשרות ההתקנה'); }
+}
+
+// ─── Trading Hours (all times in Israel time = UTC+2/UTC+3) ───────────────────
+// Returns which markets are currently open
+function openMarkets() {
+  // Israel time offset: UTC+3 in summer (DST), UTC+2 in winter
+  // We use a simple approach: get current time in Israel via Intl
+  const now = new Date();
+  const ilStr = now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem', hour12: false,
+    weekday:'short', hour:'2-digit', minute:'2-digit' });
+  // Parse: "Mon, 14:32" style
+  const parts = ilStr.split(', ');
+  const day = parts[0]; // Mon, Tue, ...
+  const [hStr, mStr] = (parts[1] || '00:00').split(':');
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  const mins = h * 60 + m; // minutes since midnight Israel time
+  const isWeekend = (day === 'Fri' && mins >= 14*60+25) || day === 'Sat';
+
+  const markets = { IL: false, US: false, UK: false };
+  if (isWeekend) return markets; // all closed on Shabbat/Saturday
+
+  // TASE: Sun–Thu 10:00–17:25 Israel time (Sun open, Fri partial)
+  const isFri = day === 'Fri';
+  const isSun = day === 'Sun';
+  const isWeekday = !isFri && !isSun && day !== 'Sat';
+
+  if ((isSun || isWeekday) && mins >= 10*60 && mins <= 17*60+25) markets.IL = true;
+  if (isFri && mins >= 10*60 && mins <= 14*60+20) markets.IL = true;
+
+  // NYSE/NASDAQ: Mon–Fri 16:30–23:00 Israel time (summer) / 17:30–00:00 (winter)
+  // Simple approximation: 16:30–23:00 covers both seasons reasonably
+  if (!isSun && !isWeekend && ((mins >= 16*60+30 && mins <= 23*60) || (mins >= 17*60+30))) {
+    markets.US = true;
+  }
+
+  // LSE: Mon–Fri 11:00–19:30 Israel time
+  if (!isSun && !isWeekend && mins >= 11*60 && mins <= 19*60+30) markets.UK = true;
+
+  return markets;
+}
+
+function anyMarketOpen() {
+  const m = openMarkets();
+  return m.IL || m.US || m.UK;
+}
+
+function marketStatusText() {
+  const m = openMarkets();
+  const open = [];
+  if (m.IL) open.push('🇮🇱');
+  if (m.US) open.push('🇺🇸');
+  if (m.UK) open.push('🇬🇧');
+  return open.length ? `פעיל: ${open.join(' ')}` : '⏸ הבורסות סגורות';
+}
+
+// Override renderRateBar to include market status
+function renderRateBar() {
+  const status = marketStatusText();
+  const statusColor = anyMarketOpen() ? 'var(--green)' : 'var(--text3)';
+  document.getElementById('rate-bar').innerHTML =
+    `<span>USD/ILS <span>${state.fx.usdils.toFixed(2)}</span></span>
+     <span>GBP/ILS <span>${state.fx.gbpils.toFixed(2)}</span></span>
+     <span style="color:${statusColor};font-size:11px;">${status}</span>
+     <span style="color:var(--text3)">${new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</span>`;
+}
+
+// Save last known prices to localStorage so they survive app close
+function saveLastPrices() {
+  try { localStorage.setItem('lastPrices_v2', JSON.stringify(state.prices)); } catch(e) {}
+}
+function loadLastPrices() {
+  try {
+    const p = localStorage.getItem('lastPrices_v2');
+    if (p) state.prices = JSON.parse(p);
+  } catch(e) {}
+}
+
+// Smart refresh: only fetch markets that are currently open
+async function smartRefresh() {
+  const open = openMarkets();
+  const toFetch = [];
+
+  state.portfolios.forEach(p => p.stocks.forEach(s => {
+    const mktOpen = (s.market === 'IL' && open.IL) ||
+                    (s.market === 'US' && open.US) ||
+                    (s.market === 'UK' && open.UK);
+    // Always fetch if we have no price yet; otherwise only if market is open
+    if (!state.prices[s.ticker]?.price || mktOpen) {
+      toFetch.push(s);
+    }
+  }));
+
+  if (!toFetch.length) {
+    // All markets closed, just re-render with cached prices
+    renderAll();
+    return;
+  }
+
+  // Fetch only the markets that are open
+  const tasks = toFetch.map(s => (async () => {
+    const d = await fetchREST(s.ticker);
+    if (d) {
+      state.prices[s.ticker] = { price: d.price, prev: d.prev || d.price, currency: d.currency, t: Date.now() };
+    }
+  })());
+  await Promise.all(tasks);
+  saveLastPrices();
+  renderAll();
+}
+
+// WebSocket: only connect during US market hours
+function smartConnectWS() {
+  const open = openMarkets();
+  if (open.US) {
+    connectWS();
+  } else {
+    // Disconnect WS if open, no need to stream
+    if (ws) { ws.close(); ws = null; }
+    setLiveDot(false);
+  }
+}
+
+// Auto refresh — runs every 60s but smartRefresh decides what to fetch
+setInterval(async () => {
+  await fetchFX();
+  await smartRefresh();
+  smartConnectWS();
+}, 60 * 1000);
+
+// Top bar edit button — inject it
+document.querySelector('.topbar-right').insertAdjacentHTML('afterbegin',
+  `<div class="icon-btn" onclick="toggleEdit()" title="עריכה">✎</div>`
+);
+
+// Init
+loadState();
+loadLastPrices(); // show last known prices immediately, before fetching
+document.getElementById('api-key-input').value = state.apiKey || '';
+renderAll(); // render immediately with cached prices (no loading flash)
+fetchFX().then(() => {
+  smartRefresh(); // then fetch only open markets (or just re-render if all closed)
+  smartConnectWS();
+});
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{});}</script>
+</body>
+</html>
