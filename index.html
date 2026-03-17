@@ -316,7 +316,7 @@ body { display: flex; flex-direction: column; }
 <body>
 
 <div class="topbar">
-  <div class="topbar-title">📊 תיקי מניות</div>
+  <div class="topbar-title">📊 תיקי מניות <span style="font-size:10px;color:var(--text3);font-weight:400;vertical-align:middle;">v1.2</span></div>
   <div class="topbar-right">
     <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
     <div class="icon-btn" onclick="manualRefresh()" title="רענן">⟳</div>
@@ -330,7 +330,7 @@ body { display: flex; flex-direction: column; }
   <div id="tab-portfolios">
     <div class="total-card" id="total-card">
       <div class="total-label">סה״כ כל התיקים</div>
-      <div class="total-ils mono" id="t-ils">טוען...</div>
+      <div class="total-ils mono" id="t-ils">—</div>
       <div class="total-usd mono" id="t-usd"></div>
       <div class="total-row">
         <div class="total-pill">
@@ -349,7 +349,7 @@ body { display: flex; flex-direction: column; }
     </div>
 
     <div class="rate-bar" id="rate-bar">
-      <span class="spin">⟳</span> טוען שערים...
+      טוען שערים...
     </div>
 
     <div class="portfolio-nav">
@@ -446,7 +446,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v1.1</div>
+          <div class="lbl">Stock Portfolio Tracker v1.2</div>
         </div>
       </div>
     </div>
@@ -692,6 +692,8 @@ function debounceRender() {
 }
 
 function renderAll() {
+  // Pre-compute all portfolios so _valILS, _price etc are available
+  state.portfolios.forEach(p => computePortfolio(p));
   renderTotals();
   renderPortfolioView();
   renderSummary();
@@ -749,7 +751,16 @@ function renderPortfolioView() {
   renderTotals();
   renderDots();
   const p = state.portfolios[state.currentPort];
-  if (!p) return;
+  if (!p) {
+    document.getElementById('port-view').innerHTML = `
+      <div class="port-card" style="padding:32px;text-align:center;">
+        <div style="font-size:32px;margin-bottom:12px;">📂</div>
+        <div style="font-size:15px;font-weight:500;margin-bottom:8px;">אין תיקים עדיין</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:20px;">לחץ על הגדרות ⚙ להוספת תיק חדש</div>
+        <button class="btn-primary" onclick="switchTab('settings')">⚙ הגדרות</button>
+      </div>`;
+    return;
+  }
   const c = computePortfolio(p);
   const gainPct = c.costILS > 0 ? ((c.gainILS/c.costILS)*100) : 0;
 
@@ -775,12 +786,15 @@ function renderPortfolioView() {
 
   let stockRows = '';
   if (p.stocks.length === 0) {
-    stockRows = `<tr><td colspan="5" class="no-stocks">לחץ על "+ ערוך" להוספת מניות</td></tr>`;
+    stockRows = `<tr><td colspan="5" class="no-stocks">
+      <div style="margin-bottom:10px;">אין מניות בתיק זה</div>
+      <button class="btn-sm" onclick="state.editMode=true;renderPortfolioView();">➕ הוסף מנייה</button>
+    </td></tr>`;
   } else {
     stockRows = p.stocks.map((s, si) => {
-      const priceStr = s._price != null
+      const priceStr = s._price != null && s._price > 0
         ? s._price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
-        : '—';
+        : '<span style="color:var(--text3)">טוען</span>';
       const dayHTML = s._dayILS != null
         ? `<span class="${cls(s._dayILS)}">${arrow(s._dayILS)}${fmtILS(Math.abs(s._dayILS))}</span>`
         : '<span style="color:var(--text3)">—</span>';
@@ -1252,9 +1266,6 @@ loadState();
 loadLastPrices();
 document.getElementById('api-key-input').value = state.apiKey || '';
 renderAll(); // render immediately — no loading screen
-
-// Update total bar text from "טוען" to show we're ready even without prices
-document.getElementById('t-ils').textContent = Object.keys(state.prices).length ? document.getElementById('t-ils').textContent : '—';
 
 fetchFX().then(() => {
   smartRefresh();
