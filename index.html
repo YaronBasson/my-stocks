@@ -316,7 +316,7 @@ body { display: flex; flex-direction: column; }
 <body>
 
 <div class="topbar">
-  <div class="topbar-title">📊 תיקי מניות <span style="font-size:10px;color:var(--text3);font-weight:400;vertical-align:middle;">v1.2</span></div>
+  <div class="topbar-title">📊 תיקי מניות <span style="font-size:10px;color:var(--text3);font-weight:400;vertical-align:middle;">v1.4</span></div>
   <div class="topbar-right">
     <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
     <div class="icon-btn" onclick="manualRefresh()" title="רענן">⟳</div>
@@ -446,7 +446,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v1.2</div>
+          <div class="lbl">Stock Portfolio Tracker v1.4</div>
         </div>
       </div>
     </div>
@@ -1135,36 +1135,27 @@ function installPWA() {
 // ─── Trading Hours (all times in Israel time = UTC+2/UTC+3) ───────────────────
 // Returns which markets are currently open
 function openMarkets() {
-  // Israel time offset: UTC+3 in summer (DST), UTC+2 in winter
-  // We use a simple approach: get current time in Israel via Intl
   const now = new Date();
-  const ilStr = now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem', hour12: false,
-    weekday:'short', hour:'2-digit', minute:'2-digit' });
-  // Parse: "Mon, 14:32" style
-  const parts = ilStr.split(', ');
-  const day = parts[0]; // Mon, Tue, ...
-  const [hStr, mStr] = (parts[1] || '00:00').split(':');
-  const h = parseInt(hStr, 10);
-  const m = parseInt(mStr, 10);
-  const mins = h * 60 + m; // minutes since midnight Israel time
-  const isWeekend = (day === 'Fri' && mins >= 14*60+25) || day === 'Sat';
+  // Get Israel date/time components reliably
+  const ilDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
+  const day = ilDate.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+  const mins = ilDate.getHours() * 60 + ilDate.getMinutes();
 
   const markets = { IL: false, US: false, UK: false };
-  if (isWeekend) return markets; // all closed on Shabbat/Saturday
 
-  // TASE: Sun–Thu 10:00–17:25 Israel time (Sun open, Fri partial)
-  const isFri = day === 'Fri';
-  const isSun = day === 'Sun';
-  const isWeekday = !isFri && !isSun && day !== 'Sat';
+  // Saturday = always closed
+  if (day === 6) return markets;
 
-  if ((isSun || isWeekday) && mins >= 10*60 && mins <= 17*60+25) markets.IL = true;
-  if (isFri && mins >= 10*60 && mins <= 14*60+20) markets.IL = true;
+  // TASE: Sun(0)–Thu(4) 10:00–17:25, Fri(5) 10:00–14:20
+  if (day >= 0 && day <= 4 && mins >= 10*60 && mins <= 17*60+25) markets.IL = true;
+  if (day === 5 && mins >= 10*60 && mins <= 14*60+20) markets.IL = true;
 
-  // NYSE/NASDAQ: Mon–Fri 16:30–23:00 Israel time (summer) / 17:30–00:00 (winter)
-  // Simple approximation: 16:30–23:00 covers both seasons reasonably
-  if (!isSun && !isWeekend && ((mins >= 16*60+30 && mins <= 23*60) || (mins >= 17*60+30))) {
-    markets.US = true;
-  }
+  // NYSE/NASDAQ: Mon(1)–Fri(5) 16:30–23:00 Israel time
+  // (NYSE 09:30–16:00 ET = 16:30–23:00 Israel summer / 17:30–00:00 winter)
+  if (day >= 1 && day <= 5 && mins >= 16*60+30 && mins <= 23*60) markets.US = true;
+
+  // LSE: Mon(1)–Fri(5) 11:00–19:30 Israel time
+  if (day >= 1 && day <= 5 && mins >= 11*60 && mins <= 19*60+30) markets.UK = true;
 
   // LSE: Mon–Fri 11:00–19:30 Israel time
   if (!isSun && !isWeekend && mins >= 11*60 && mins <= 19*60+30) markets.UK = true;
