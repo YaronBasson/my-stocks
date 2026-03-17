@@ -340,7 +340,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v2.2</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v2.4</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -478,7 +478,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v2.2</div>
+          <div class="lbl">Stock Portfolio Tracker v2.4</div>
         </div>
       </div>
     </div>
@@ -825,7 +825,7 @@ function renderPortfolioView() {
   if (!p) {
     document.getElementById('port-view').innerHTML = `
       <div class="port-card" style="padding:32px;text-align:center;">
-        <div style="font-size:32px;margin-bottom:12px;">\u1F4C2</div>
+        <div style="font-size:32px;margin-bottom:12px;"></div>
         <div style="font-size:15px;font-weight:500;margin-bottom:8px;">\u05D0\u05D9\u05DF \u05EA\u05D9\u05E7\u05D9\u05DD \u05E2\u05D3\u05D9\u05D9\u05DF</div>
         <div style="font-size:13px;color:var(--text2);margin-bottom:20px;">\u05DC\u05D7\u05E5 \u05E2\u05DC \u05D4\u05D2\u05D3\u05E8\u05D5\u05EA \u2699 \u05DC\u05D4\u05D5\u05E1\u05E4\u05EA \u05EA\u05D9\u05E7 \u05D7\u05D3\u05E9</div>
         <button class="btn-primary" onclick="switchTab('settings')">\u2699 \u05D4\u05D2\u05D3\u05E8\u05D5\u05EA</button>
@@ -841,9 +841,9 @@ function renderPortfolioView() {
       <div class="row">
         <input type="text" id="ns-ticker" placeholder="\u05E1\u05D9\u05DE\u05D5\u05DC: AAPL / TEVA.TA / BP.L" style="direction:ltr;text-transform:uppercase;flex:2;" onfocus="formOpen=true" onblur="formOpen=true">
         <select id="ns-market" onfocus="formOpen=true" style="flex:1;">
-          <option value="US">\u1F1FA\u1F1F8 \u05D0\u05E8\u05D4"\u05D1</option>
-          <option value="IL">\u1F1EE\u1F1F1 \u05D9\u05E9\u05E8\u05D0\u05DC</option>
-          <option value="UK">\u1F1EC\u1F1E7 \u05DC\u05D5\u05E0\u05D3\u05D5\u05DF</option>
+          <option value="US">US \u05D0\u05E8\u05D4"\u05D1</option>
+          <option value="IL">IL \u05D9\u05E9\u05E8\u05D0\u05DC</option>
+          <option value="UK">UK \u05DC\u05D5\u05E0\u05D3\u05D5\u05DF</option>
         </select>
       </div>
       <input type="text" id="ns-name" placeholder="\u05E9\u05DD \u05D4\u05D7\u05D1\u05E8\u05D4" onfocus="formOpen=true" onblur="formOpen=true">
@@ -851,7 +851,7 @@ function renderPortfolioView() {
         <input type="number" id="ns-qty" placeholder="\u05DB\u05DE\u05D5\u05EA \u05DE\u05E0\u05D9\u05D5\u05EA" style="flex:1;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
         <input type="number" id="ns-cost" placeholder="\u05E2\u05DC\u05D5\u05EA \u05E8\u05DB\u05D9\u05E9\u05D4 \u05DC\u05DE\u05E0\u05D9\u05D9\u05D4" style="flex:2;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
       </div>
-      <button class="btn-primary" onclick="addStockToPort(${state.currentPort})">\u2795 \u05D4\u05D5\u05E1\u05E3 \u05DE\u05E0\u05D9\u05D9\u05D4 \u05DC\u05EA\u05D9\u05E7</button>
+      <button class="btn-primary" onclick="addStockToPort(${state.currentPort})">+ \u05D4\u05D5\u05E1\u05E3 \u05DE\u05E0\u05D9\u05D9\u05D4</button>
     </div>`;
   }
 
@@ -859,7 +859,7 @@ function renderPortfolioView() {
   if (p.stocks.length === 0) {
     stockCardsHTML = `<div style="padding:24px;text-align:center;color:var(--text3);">
       <div style="margin-bottom:10px;">\u05D0\u05D9\u05DF \u05DE\u05E0\u05D9\u05D5\u05EA \u05D1\u05EA\u05D9\u05E7 \u05D6\u05D4</div>
-      <button class="btn-sm" onclick="state.editMode=true;renderPortfolioView();">\u2795 \u05D4\u05D5\u05E1\u05E3 \u05DE\u05E0\u05D9\u05D9\u05D4</button>
+      <button class="btn-sm" onclick="state.editMode=true;renderPortfolioView();">+ \u05D4\u05D5\u05E1\u05E3 \u05DE\u05E0\u05D9\u05D9\u05D4</button>
     </div>`;
   } else {
     stockCardsHTML = p.stocks.map((s, si) => {
@@ -923,7 +923,7 @@ function renderPortfolioView() {
 
   const renameBtn = state.editMode
     ? `<button class="btn-sm" onclick="renamePort(${state.currentPort})" style="margin-right:4px;">\u270E \u05E9\u05E0\u05D4 \u05E9\u05DD</button>
-       <button class="btn-sm" style="color:var(--red);border-color:var(--red);" onclick="deletePort(${state.currentPort})">\u1F5D1 \u05DE\u05D7\u05E7 \u05EA\u05D9\u05E7</button>`
+       <button class="btn-sm" style="color:var(--red);border-color:var(--red);" onclick="deletePort(${state.currentPort})">\u05DE\u05D7\u05E7 \u05EA\u05D9\u05E7</button>`
     : '';
 
   document.getElementById('port-view').innerHTML = `
@@ -1080,7 +1080,7 @@ async function addStockToPort(pIdx) {
   formOpen = false;
   fetchAllPrices().then(() => renderAll());
   showNotif(`${ticker} (${market}) \u05E0\u05D5\u05E1\u05E3 \u05DC\u05EA\u05D9\u05E7 \u2713`);
-  if (btn) btn.textContent = '\u2795 \u05D4\u05D5\u05E1\u05E3 \u05DE\u05E0\u05D9\u05D9\u05D4 \u05DC\u05EA\u05D9\u05E7';
+  if (btn) btn.textContent = '+ \u05D4\u05D5\u05E1\u05E3 \u05DE\u05E0\u05D9\u05D9\u05D4';
   if (market === 'US' && ws && ws.readyState === 1) {
     ws.send(JSON.stringify({ type:'subscribe', symbol: ticker }));
   }
@@ -1149,7 +1149,7 @@ function checkAlerts() {
       a.triggered = true;
       saveState();
       const msg = `${a.ticker}: \u05DE\u05D7\u05D9\u05E8 ${pd.price.toFixed(2)} ${a.dir==='above'?'\u05E2\u05DC\u05D4 \u05DE\u05E2\u05DC':'\u05D9\u05E8\u05D3 \u05DE\u05EA\u05D7\u05EA \u05DC-'}${a.price}`;
-      showNotif('\u1F514 ' + msg);
+      showNotif(' ' + msg);
       if (Notification.permission === 'granted') {
         new Notification('\u05D4\u05EA\u05E8\u05D0\u05EA \u05DE\u05E0\u05D9\u05D9\u05D4', { body: msg });
       }
@@ -1177,14 +1177,14 @@ function showNotif(msg) {
 
 async function manualRefresh() {
   const btn = document.querySelector('.icon-btn[onclick="manualRefresh()"]');
-  if (btn) btn.textContent = '\u2026';
+  if (btn) btn.textContent = '...';
   await fetchFX();
   state.portfolios.forEach(p => p.stocks.forEach(s => {
     if (state.prices[s.ticker]) state.prices[s.ticker].price = null;
   }));
   await smartRefresh();
   showNotif(anyMarketOpen() ? '\u05DE\u05D7\u05D9\u05E8\u05D9\u05DD \u05E2\u05D5\u05D3\u05DB\u05E0\u05D5 \u2713' : '\u05D1\u05D5\u05E8\u05E1\u05D0\u05D5\u05EA \u05E1\u05D2\u05D5\u05E8\u05D5\u05EA \u2014 \u05DE\u05D7\u05D9\u05E8 \u05D0\u05D7\u05E8\u05D5\u05DF');
-  if (btn) btn.textContent = '\u27B3';
+  if (btn) btn.textContent = '>';
 }
 
 // Swipe gesture
@@ -1298,10 +1298,10 @@ function anyMarketOpen() {
 function marketStatusText() {
   const m = openMarkets();
   const open = [];
-  if (m.IL) open.push('\u1F1EE\u1F1F1');
-  if (m.US) open.push('\u1F1FA\u1F1F8');
-  if (m.UK) open.push('\u1F1EC\u1F1E7');
-  return open.length ? `\u05E4\u05E2\u05D9\u05DC: ${open.join(' ')}` : '\u23F8 \u05D4\u05D1\u05D5\u05E8\u05E1\u05D5\u05EA \u05E1\u05D2\u05D5\u05E8\u05D5\u05EA';
+  if (m.IL) open.push('IL');
+  if (m.US) open.push('US');
+  if (m.UK) open.push('UK');
+  return open.length ? `\u05E4\u05E2\u05D9\u05DC: ${open.join(' ')}` : '|| \u05D4\u05D1\u05D5\u05E8\u05E1\u05D5\u05EA \u05E1\u05D2\u05D5\u05E8\u05D5\u05EA';
 }
 
 function renderApiKeyIndicator() {
@@ -1328,9 +1328,9 @@ function renderMarketStatus() {
   const ilDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
   const timeStr = ilDate.getHours().toString().padStart(2,'0') + ':' + ilDate.getMinutes().toString().padStart(2,'0');
   const mkts = [
-    { key: 'IL', label: 'TASE', flag: '\u1F1EE\u1F1F1' },
-    { key: 'US', label: 'NYSE', flag: '\u1F1FA\u1F1F8' },
-    { key: 'UK', label: 'LSE',  flag: '\u1F1EC\u1F1E7' },
+    { key: 'IL', label: 'TASE', flag: 'IL' },
+    { key: 'US', label: 'NYSE', flag: 'US' },
+    { key: 'UK', label: 'LSE',  flag: 'UK' },
   ];
   const anyOpen = m.IL || m.US || m.UK;
   el.innerHTML = mkts.map(mk => {
