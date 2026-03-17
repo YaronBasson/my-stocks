@@ -515,6 +515,7 @@ let ws = null;
 let wsReconnectTimer = null;
 let deferredInstall = null;
 let alertFormOpen = false;
+let formOpen = false; // true when add-stock form is active — blocks auto re-render
 
 function loadState() {
   try {
@@ -687,15 +688,15 @@ function arrow(v) { return v >= 0 ? '▲' : '▼'; }
 // Render debounce
 let renderTimer = null;
 function debounceRender() {
+  if (formOpen) return; // don't wipe the form mid-typing
   clearTimeout(renderTimer);
   renderTimer = setTimeout(() => renderPortfolioView(), 200);
 }
 
 function renderAll() {
-  // Pre-compute all portfolios so _valILS, _price etc are available
   state.portfolios.forEach(p => computePortfolio(p));
   renderTotals();
-  renderPortfolioView();
+  if (!formOpen) renderPortfolioView(); // skip if user is typing in add-stock form
   renderSummary();
   renderAlerts();
 }
@@ -929,6 +930,7 @@ function gotoPort(i) { state.currentPort = i; renderPortfolioView(); }
 
 function toggleEdit() {
   state.editMode = !state.editMode;
+  if (!state.editMode) formOpen = false; // closing edit mode clears form lock
   document.querySelector('.icon-btn[onclick="toggleEdit()"]').textContent = state.editMode ? '✓' : '✎';
   renderPortfolioView();
 }
@@ -942,7 +944,9 @@ function addStockToPort(pIdx) {
   if (!ticker || !qty || !cost) { showNotif('יש למלא סימול, כמות ועלות'); return; }
   state.portfolios[pIdx].stocks.push({ ticker, name: name || ticker, qty, cost, market: market || 'US' });
   saveState();
+  formOpen = false; // allow re-render now
   fetchAllPrices().then(() => renderAll());
+  showNotif(`${ticker} נוסף לתיק ✓`);
   if (market === 'US' && ws && ws.readyState === 1) {
     ws.send(JSON.stringify({ type:'subscribe', symbol: ticker }));
   }
