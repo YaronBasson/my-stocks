@@ -1123,7 +1123,7 @@ function importData(event) {
   reader.readAsText(file);
 }
 
-
+function installPWA() {
   if (deferredInstall) { deferredInstall.prompt(); }
   else { showNotif('פתח בדפדפן Chrome/Samsung לאפשרות ההתקנה'); }
 }
