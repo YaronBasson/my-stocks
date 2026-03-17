@@ -2,6 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0a0a0f">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -335,22 +336,24 @@ body { display: flex; flex-direction: column; }
 </head>
 <body>
 
-<div class="topbar">
-  <div class="topbar-title" style="display:flex;align-items:center;gap:10px;">
-    <span>📊 תיקי מניות</span>
-    <span id="market-status" style="display:flex;gap:6px;align-items:center;font-size:11px;font-weight:400;"></span>
-    <span style="font-size:10px;color:var(--text3);font-weight:400;">v1.8</span>
-  </div>
-  <div class="topbar-right">
-    <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
-    <div id="apikey-indicator" title="סטטוס API Key" onclick="switchTab('settings')"
-      style="font-size:10px;padding:3px 7px;border-radius:5px;cursor:pointer;
-             background:var(--bg3);border:0.5px solid var(--border2);color:var(--text3);">
-      KEY
+<div class="topbar" style="flex-direction:column;gap:0;padding-bottom:0;">
+  <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;">
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v2.0</span>
     </div>
-    <div class="icon-btn" onclick="manualRefresh()" title="רענן">⟳</div>
-    <div class="icon-btn" onclick="switchTab('settings')" title="הגדרות">⚙</div>
+    <div class="topbar-right">
+      <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
+      <div id="apikey-indicator" title="סטטוס API Key" onclick="switchTab('settings')"
+        style="font-size:10px;padding:3px 7px;border-radius:5px;cursor:pointer;
+               background:var(--bg3);border:0.5px solid var(--border2);color:var(--text3);">
+        KEY
+      </div>
+      <div class="icon-btn" onclick="manualRefresh()" title="רענן">⟳</div>
+      <div class="icon-btn" onclick="switchTab('settings')" title="הגדרות">⚙</div>
+    </div>
   </div>
+  <div id="market-status" style="display:flex;gap:12px;align-items:center;font-size:12px;font-weight:400;padding:6px 0;border-top:0.5px solid var(--border);width:100%;"></div>
 </div>
 
 <div class="scroll-area" id="main-scroll">
@@ -475,7 +478,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v1.8</div>
+          <div class="lbl">Stock Portfolio Tracker v2.0</div>
         </div>
       </div>
     </div>
@@ -656,12 +659,12 @@ async function fetchFinnhubREST(ticker) {
   try {
     const r = await fetchWithTimeout(
       `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${state.apiKey}`, 6000);
-    if (!r.ok) return null;
+    if (!r.ok) { console.warn('Finnhub HTTP error:', r.status, ticker); return null; }
     const d = await r.json();
-    // Finnhub: c=current, pc=prev close, o=open, h=high, l=low
+    console.log('Finnhub', ticker, d);
     if (!d.c || d.c === 0) return null;
     return { price: d.c, prev: d.pc, currency: 'USD' };
-  } catch(e) { return null; }
+  } catch(e) { console.warn('Finnhub fetch error:', ticker, e.message); return null; }
 }
 
 // Yahoo Finance via multiple CORS proxies
@@ -722,15 +725,20 @@ async function fetchAllPrices() {
 
 // Currency conversion
 function toILS(price, currency, market) {
-  if (!currency) {
-    if (market === 'IL') return price;
-    if (market === 'US') return price * state.fx.usdils;
-    if (market === 'UK') return price * state.fx.gbpils / 100;
+  // If we have a currency from the API, use it precisely
+  if (currency) {
+    const c = currency.toUpperCase();
+    if (['ILS','ILA','ILX'].includes(c)) return price;
+    if (c === 'USD') return price * state.fx.usdils;
+    if (c === 'GBP') return price * state.fx.gbpils;
+    if (['GBP','GBX'].includes(c)) return price * state.fx.gbpils / 100;
+    // GBp = pence (100 pence = 1 GBP)
+    if (currency === 'GBp') return price * state.fx.gbpils / 100;
   }
-  if (['ILS','ILA'].includes(currency)) return price;
-  if (currency === 'USD') return price * state.fx.usdils;
-  if (currency === 'GBP') return price * state.fx.gbpils;
-  if (['GBp','GBX'].includes(currency)) return price * state.fx.gbpils / 100;
+  // Fall back to market
+  if (market === 'IL') return price;
+  if (market === 'US') return price * state.fx.usdils;
+  if (market === 'UK') return price * state.fx.gbpils / 100;
   return price;
 }
 
@@ -1024,18 +1032,58 @@ function toggleEdit() {
   renderPortfolioView();
 }
 
-function addStockToPort(pIdx) {
-  const ticker = document.getElementById('ns-ticker')?.value.trim().toUpperCase();
+async function searchTicker(rawTicker) {
+  // Try Finnhub symbol search to identify exchange
+  if (!state.apiKey) return null;
+  try {
+    const r = await fetchWithTimeout(
+      `https://finnhub.io/api/v1/search?q=${encodeURIComponent(rawTicker)}&token=${state.apiKey}`, 5000);
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (!d.result?.length) return null;
+    // Find exact or best match
+    const exact = d.result.find(s => s.symbol === rawTicker || s.symbol === rawTicker + '.TA');
+    const best = exact || d.result[0];
+    return { symbol: best.symbol, description: best.description, type: best.type };
+  } catch(e) { return null; }
+}
+
+async function addStockToPort(pIdx) {
+  const rawTicker = document.getElementById('ns-ticker')?.value.trim().toUpperCase();
   const name = document.getElementById('ns-name')?.value.trim();
   const qty = parseFloat(document.getElementById('ns-qty')?.value);
   const cost = parseFloat(document.getElementById('ns-cost')?.value);
-  const market = document.getElementById('ns-market')?.value;
-  if (!ticker || !qty || isNaN(cost)) { showNotif('יש למלא סימול, כמות ועלות (עלות 0 תקינה ל-RSU)'); return; }
-  state.portfolios[pIdx].stocks.push({ ticker, name: name || ticker, qty, cost, market: market || 'US' });
+  const selectedMarket = document.getElementById('ns-market')?.value;
+  if (!rawTicker || !qty || isNaN(cost)) { showNotif('יש למלא סימול, כמות ועלות (עלות 0 תקינה ל-RSU)'); return; }
+
+  const btn = document.querySelector(`button[onclick="addStockToPort(${pIdx})"]`);
+  if (btn) btn.textContent = 'מזהה...';
+
+  // Auto-detect market from ticker suffix or Finnhub search
+  let ticker = rawTicker;
+  let market = selectedMarket;
+  let autoName = name;
+
+  if (rawTicker.endsWith('.TA')) { market = 'IL'; }
+  else if (rawTicker.endsWith('.L')) { market = 'UK'; }
+  else if (!rawTicker.includes('.')) {
+    // Try to detect via Finnhub search
+    const found = await searchTicker(rawTicker);
+    if (found) {
+      ticker = found.symbol;
+      if (!autoName) autoName = found.description;
+      if (ticker.endsWith('.TA')) market = 'IL';
+      else if (ticker.endsWith('.L')) market = 'UK';
+      else market = 'US';
+    }
+  }
+
+  state.portfolios[pIdx].stocks.push({ ticker, name: autoName || ticker, qty, cost, market });
   saveState();
-  formOpen = false; // allow re-render now
+  formOpen = false;
   fetchAllPrices().then(() => renderAll());
-  showNotif(`${ticker} נוסף לתיק ✓`);
+  showNotif(`${ticker} (${market}) נוסף לתיק ✓`);
+  if (btn) btn.textContent = '➕ הוסף מנייה לתיק';
   if (market === 'US' && ws && ws.readyState === 1) {
     ws.send(JSON.stringify({ type:'subscribe', symbol: ticker }));
   }
@@ -1287,19 +1335,26 @@ function renderMarketStatus() {
   const m = openMarkets();
   const el = document.getElementById('market-status');
   if (!el) return;
-  const markets = [
-    { key: 'IL', label: 'IL', flag: '🇮🇱' },
-    { key: 'US', label: 'US', flag: '🇺🇸' },
-    { key: 'UK', label: 'UK', flag: '🇬🇧' },
+  const now = new Date();
+  const ilDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
+  const timeStr = ilDate.getHours().toString().padStart(2,'0') + ':' + ilDate.getMinutes().toString().padStart(2,'0');
+  const mkts = [
+    { key: 'IL', label: 'TASE', flag: '🇮🇱' },
+    { key: 'US', label: 'NYSE', flag: '🇺🇸' },
+    { key: 'UK', label: 'LSE',  flag: '🇬🇧' },
   ];
-  el.innerHTML = markets.map(mk => `
-    <span style="display:flex;align-items:center;gap:3px;">
-      <span style="width:7px;height:7px;border-radius:50%;background:${m[mk.key] ? 'var(--green)' : '#444'};
-        ${m[mk.key] ? 'box-shadow:0 0 5px var(--green);' : ''}
+  const anyOpen = m.IL || m.US || m.UK;
+  el.innerHTML = mkts.map(mk => {
+    const open = m[mk.key];
+    return `<span style="display:flex;align-items:center;gap:4px;">
+      <span style="width:8px;height:8px;border-radius:50%;
+        background:${open ? 'var(--green)' : 'var(--text3)'};
+        ${open ? 'box-shadow:0 0 6px var(--green);' : 'opacity:0.4;'}
         display:inline-block;flex-shrink:0;"></span>
-      <span style="color:${m[mk.key] ? 'var(--text)' : 'var(--text3)'};">${mk.flag}${mk.label}</span>
-    </span>
-  `).join('');
+      <span style="color:${open ? 'var(--text)' : 'var(--text3)'};">${mk.flag} ${mk.label}</span>
+    </span>`;
+  }).join('') +
+  `<span style="color:var(--text3);font-size:11px;margin-right:auto;">${timeStr} IL · ${anyOpen ? 'פעיל' : 'סגור'}</span>`;
 }
 
 // Override renderRateBar to include market status
