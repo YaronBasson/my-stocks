@@ -606,20 +606,38 @@ function setLiveDot(on) {
 }
 
 // REST fallback for non-US or missing prices
-async function fetchREST(ticker) {
+async function fetchWithTimeout(url, ms = 8000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
   try {
-    // Try Yahoo Finance as proxy
-    const sym = encodeURIComponent(ticker);
-    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=2d`);
-    const d = await r.json();
-    const res = d.result || d.chart?.result;
-    if (!res || !res[0]) return null;
-    const meta = res[0].meta;
-    const price = meta.regularMarketPrice;
-    const prev = meta.previousClose || meta.chartPreviousClose;
-    const cur = meta.currency;
-    return { price, prev, currency: cur };
-  } catch(e) { return null; }
+    const r = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timer);
+    return r;
+  } catch(e) { clearTimeout(timer); throw e; }
+}
+
+async function fetchREST(ticker) {
+  const sym = encodeURIComponent(ticker);
+  const base = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=2d`;
+  const urls = [
+    `https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=2d`,
+    base,
+    `https://corsproxy.io/?url=${encodeURIComponent(base)}`,
+  ];
+  for (const url of urls) {
+    try {
+      const r = await fetchWithTimeout(url, 7000);
+      if (!r.ok) continue;
+      const d = await r.json();
+      const res = d.result || d.chart?.result;
+      if (!res || !res[0]) continue;
+      const meta = res[0].meta;
+      const price = meta.regularMarketPrice;
+      const prev = meta.previousClose || meta.chartPreviousClose;
+      if (price) return { price, prev, currency: meta.currency };
+    } catch(e) { continue; }
+  }
+  return null;
 }
 
 async function fetchAllPrices() {
@@ -1231,13 +1249,25 @@ document.querySelector('.topbar-right').insertAdjacentHTML('afterbegin',
 
 // Init
 loadState();
-loadLastPrices(); // show last known prices immediately, before fetching
+loadLastPrices();
 document.getElementById('api-key-input').value = state.apiKey || '';
-renderAll(); // render immediately with cached prices (no loading flash)
+renderAll(); // render immediately — no loading screen
+
+// Update total bar text from "טוען" to show we're ready even without prices
+document.getElementById('t-ils').textContent = Object.keys(state.prices).length ? document.getElementById('t-ils').textContent : '—';
+
 fetchFX().then(() => {
-  smartRefresh(); // then fetch only open markets (or just re-render if all closed)
+  smartRefresh();
   smartConnectWS();
+}).catch(() => {
+  renderRateBar();
+  renderAll();
 });
+
+// If no API key — show hint
+if (!state.apiKey) {
+  setTimeout(() => showNotif('הכנס Finnhub API key בהגדרות ⚙'), 800);
+}
 </script>
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{});}</script>
 </body>
