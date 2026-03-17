@@ -339,10 +339,15 @@ body { display: flex; flex-direction: column; }
   <div class="topbar-title" style="display:flex;align-items:center;gap:10px;">
     <span>📊 תיקי מניות</span>
     <span id="market-status" style="display:flex;gap:6px;align-items:center;font-size:11px;font-weight:400;"></span>
-    <span style="font-size:10px;color:var(--text3);font-weight:400;">v1.7</span>
+    <span style="font-size:10px;color:var(--text3);font-weight:400;">v1.8</span>
   </div>
   <div class="topbar-right">
     <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
+    <div id="apikey-indicator" title="סטטוס API Key" onclick="switchTab('settings')"
+      style="font-size:10px;padding:3px 7px;border-radius:5px;cursor:pointer;
+             background:var(--bg3);border:0.5px solid var(--border2);color:var(--text3);">
+      KEY
+    </div>
     <div class="icon-btn" onclick="manualRefresh()" title="רענן">⟳</div>
     <div class="icon-btn" onclick="switchTab('settings')" title="הגדרות">⚙</div>
   </div>
@@ -470,7 +475,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v1.7</div>
+          <div class="lbl">Stock Portfolio Tracker v1.8</div>
         </div>
       </div>
     </div>
@@ -635,34 +640,64 @@ async function fetchWithTimeout(url, ms = 8000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   try {
-    const r = await fetch(url, { signal: ctrl.signal });
+    const r = await fetch(url, {
+      signal: ctrl.signal,
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
     clearTimeout(timer);
     return r;
   } catch(e) { clearTimeout(timer); throw e; }
 }
 
-async function fetchREST(ticker) {
+// Finnhub REST — works for US stocks with API key, no CORS issues
+async function fetchFinnhubREST(ticker) {
+  if (!state.apiKey) return null;
+  try {
+    const r = await fetchWithTimeout(
+      `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${state.apiKey}`, 6000);
+    if (!r.ok) return null;
+    const d = await r.json();
+    // Finnhub: c=current, pc=prev close, o=open, h=high, l=low
+    if (!d.c || d.c === 0) return null;
+    return { price: d.c, prev: d.pc, currency: 'USD' };
+  } catch(e) { return null; }
+}
+
+// Yahoo Finance via multiple CORS proxies
+async function fetchYahoo(ticker) {
   const sym = encodeURIComponent(ticker);
-  const base = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=2d`;
-  const urls = [
-    `https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=2d`,
-    base,
-    `https://corsproxy.io/?url=${encodeURIComponent(base)}`,
+  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=2d`;
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(yahooUrl)}`,
+    `https://proxy.cors.sh/${yahooUrl}`,
+    yahooUrl, // direct — sometimes works
   ];
-  for (const url of urls) {
+  for (const url of proxies) {
     try {
       const r = await fetchWithTimeout(url, 7000);
       if (!r.ok) continue;
       const d = await r.json();
       const res = d.result || d.chart?.result;
-      if (!res || !res[0]) continue;
+      if (!res?.[0]) continue;
       const meta = res[0].meta;
       const price = meta.regularMarketPrice;
       const prev = meta.previousClose || meta.chartPreviousClose;
-      if (price) return { price, prev, currency: meta.currency };
+      if (price && price > 0) return { price, prev, currency: meta.currency };
     } catch(e) { continue; }
   }
   return null;
+}
+
+async function fetchREST(ticker, market) {
+  // US: try Finnhub first (reliable, API key), fall back to Yahoo
+  if (market === 'US') {
+    const r = await fetchFinnhubREST(ticker);
+    if (r) return r;
+  }
+  // IL / UK / fallback: Yahoo proxies
+  return await fetchYahoo(ticker);
 }
 
 async function fetchAllPrices() {
@@ -670,7 +705,7 @@ async function fetchAllPrices() {
   state.portfolios.forEach(p => p.stocks.forEach(s => {
     if (!state.prices[s.ticker] || !state.prices[s.ticker].price) {
       tasks.push((async () => {
-        const d = await fetchREST(s.ticker);
+        const d = await fetchREST(s.ticker, s.market);
         if (d) {
           state.prices[s.ticker] = {
             price: d.price,
@@ -700,7 +735,7 @@ function toILS(price, currency, market) {
 }
 
 function fmtILS(v) {
-  return '\u20AA' + Math.round(v).toLocaleString('he-IL');
+  return '₪' + Math.round(v).toLocaleString('he-IL');
 }
 function fmtUSD(v) {
   return '$' + Math.round(v).toLocaleString('en-US');
@@ -1083,6 +1118,7 @@ function saveApiKey() {
   state.apiKey = key;
   saveState();
   showNotif('API key נשמר!');
+  renderApiKeyIndicator();
   connectWS();
   fetchAllPrices().then(() => renderAll());
 }
@@ -1231,6 +1267,22 @@ function marketStatusText() {
   return open.length ? `פעיל: ${open.join(' ')}` : '⏸ הבורסות סגורות';
 }
 
+function renderApiKeyIndicator() {
+  const el = document.getElementById('apikey-indicator');
+  if (!el) return;
+  if (state.apiKey) {
+    el.textContent = 'KEY ✓';
+    el.style.color = 'var(--green)';
+    el.style.borderColor = 'var(--green)';
+    el.title = 'API Key מוגדר ✓';
+  } else {
+    el.textContent = 'KEY ✗';
+    el.style.color = 'var(--red)';
+    el.style.borderColor = 'var(--red)';
+    el.title = 'חסר API Key — לחץ להגדרות';
+  }
+}
+
 function renderMarketStatus() {
   const m = openMarkets();
   const el = document.getElementById('market-status');
@@ -1253,10 +1305,15 @@ function renderMarketStatus() {
 // Override renderRateBar to include market status
 function renderRateBar() {
   renderMarketStatus();
+  renderApiKeyIndicator();
+  const apiWarn = !state.apiKey
+    ? `<span style="color:var(--red);font-size:11px;">⚠ חסר API key</span>`
+    : '';
   document.getElementById('rate-bar').innerHTML =
     `<span>USD/ILS <span>${state.fx.usdils.toFixed(2)}</span></span>
      <span>GBP/ILS <span>${state.fx.gbpils.toFixed(2)}</span></span>
-     <span style="color:var(--text3)">${new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</span>`;
+     <span style="color:var(--text3)">${new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</span>
+     ${apiWarn}`;
 }
 
 // Save last known prices to localStorage so they survive app close
@@ -1293,7 +1350,7 @@ async function smartRefresh() {
 
   // Fetch only the markets that are open
   const tasks = toFetch.map(s => (async () => {
-    const d = await fetchREST(s.ticker);
+    const d = await fetchREST(s.ticker, s.market);
     if (d) {
       state.prices[s.ticker] = { price: d.price, prev: d.prev || d.price, currency: d.currency, t: Date.now() };
     }
@@ -1320,6 +1377,7 @@ setInterval(async () => {
   await fetchFX();
   await smartRefresh();
   smartConnectWS();
+  renderMarketStatus();
 }, 60 * 1000);
 
 // Top bar edit button — inject it
@@ -1333,6 +1391,7 @@ loadLastPrices();
 document.getElementById('api-key-input').value = state.apiKey || '';
 renderAll(); // render immediately — no loading screen
 renderMarketStatus();
+renderApiKeyIndicator();
 
 fetchFX().then(() => {
   smartRefresh();
