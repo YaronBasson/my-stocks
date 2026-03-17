@@ -232,6 +232,24 @@ body { display: flex; flex-direction: column; }
   padding: 28px; text-align: center;
   color: var(--text3); font-size: 13px;
 }
+.stocks-list { display: flex; flex-direction: column; }
+.stock-card {
+  padding: 12px 14px;
+  border-top: 0.5px solid var(--border);
+}
+.stock-card:active { background: var(--bg3); }
+.sc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.sc-qty { font-size: 11px; color: var(--text3); margin-top: 3px; font-family: var(--mono); }
+.sc-val { font-family: var(--mono); font-size: 15px; font-weight: 500; text-align: left; }
+.sc-val-usd { font-family: var(--mono); font-size: 11px; color: var(--text2); text-align: left; }
+.sc-bottom {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 6px; background: var(--bg3);
+  border-radius: 8px; padding: 8px;
+}
+.sc-metric { text-align: center; }
+.sc-metric-lbl { font-size: 9px; color: var(--text3); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
+.sc-metric-val { font-family: var(--mono); font-size: 11px; font-weight: 500; line-height: 1.3; }
 
 /* ALERTS */
 .section { margin: 0 12px 12px; }
@@ -321,7 +339,7 @@ body { display: flex; flex-direction: column; }
   <div class="topbar-title" style="display:flex;align-items:center;gap:10px;">
     <span>📊 תיקי מניות</span>
     <span id="market-status" style="display:flex;gap:6px;align-items:center;font-size:11px;font-weight:400;"></span>
-    <span style="font-size:10px;color:var(--text3);font-weight:400;">v1.6</span>
+    <span style="font-size:10px;color:var(--text3);font-weight:400;">v1.7</span>
   </div>
   <div class="topbar-right">
     <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -452,7 +470,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v1.6</div>
+          <div class="lbl">Stock Portfolio Tracker v1.7</div>
         </div>
       </div>
     </div>
@@ -719,13 +737,19 @@ function computePortfolio(p) {
       const prevVal = toILS((prev || price) * s.qty, cur, s.market);
       const cost = toILS(s.cost * s.qty, null, s.market);
       s._valILS = val;
+      s._valUSD = val / state.fx.usdils;
       s._costILS = cost;
+      s._costUSD = cost / state.fx.usdils;
       s._dayILS = val - prevVal;
+      s._dayPct = prevVal > 0 ? ((val - prevVal) / prevVal * 100) : 0;
       s._price = price;
+      s._prev = prev;
       totalILS += val; costILS += cost; dayILS += val - prevVal;
     } else {
       const est = toILS(s.cost * s.qty, null, s.market);
-      s._valILS = est; s._costILS = est; s._dayILS = 0; s._price = null;
+      s._valILS = est; s._valUSD = est / state.fx.usdils;
+      s._costILS = est; s._costUSD = est / state.fx.usdils;
+      s._dayILS = 0; s._dayPct = 0; s._price = null;
       totalILS += est; costILS += est;
     }
   });
@@ -791,41 +815,69 @@ function renderPortfolioView() {
     </div>`;
   }
 
-  let stockRows = '';
+  let stockCardsHTML = '';
   if (p.stocks.length === 0) {
-    stockRows = `<tr><td colspan="5" class="no-stocks">
+    stockCardsHTML = `<div style="padding:24px;text-align:center;color:var(--text3);">
       <div style="margin-bottom:10px;">אין מניות בתיק זה</div>
       <button class="btn-sm" onclick="state.editMode=true;renderPortfolioView();">➕ הוסף מנייה</button>
-    </td></tr>`;
+    </div>`;
   } else {
-    stockRows = p.stocks.map((s, si) => {
-      const priceStr = s._price != null && s._price > 0
+    stockCardsHTML = p.stocks.map((s, si) => {
+      const hasPrice = s._price != null && s._price > 0;
+      const priceStr = hasPrice
         ? s._price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
-        : '<span style="color:var(--text3)">טוען</span>';
-      const dayHTML = s._dayILS != null
-        ? `<span class="${cls(s._dayILS)}">${arrow(s._dayILS)}${fmtILS(Math.abs(s._dayILS))}</span>`
-        : '<span style="color:var(--text3)">—</span>';
-      const totalGain = (s._valILS || 0) - (s._costILS || 0);
-      const totalPct = s._costILS > 0 ? ((totalGain/s._costILS)*100).toFixed(1) : '0.0';
+        : '—';
+      const prevStr = hasPrice && s._prev
+        ? s._prev.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+        : '—';
+
+      const valILS = s._valILS || s._costILS || 0;
+      const valUSD = valILS / state.fx.usdils;
+
+      const dayILS = s._dayILS || 0;
+      const dayPct = s._dayPct || 0;
+      const dayUSD = dayILS / state.fx.usdils;
+
+      const gainILS = valILS - (s._costILS || 0);
+      const gainUSD = gainILS / state.fx.usdils;
+      const gainPct = s._costILS > 0 ? ((gainILS / s._costILS) * 100) : 0;
+
       const delBtn = state.editMode
-        ? `<button class="del-btn" onclick="removeStock(${state.currentPort},${si})">✕</button>`
+        ? `<button class="del-btn" onclick="removeStock(${state.currentPort},${si})" style="position:absolute;top:10px;left:10px;">✕</button>`
         : '';
-      return `<tr class="stock-row">
-        <td>
-          <div class="s-ticker">${s.ticker.replace('.TA','').replace('.L','')} <span class="badge ${s.market.toLowerCase()}">${s.market}</span></div>
-          <div class="s-name">${s.name}</div>
-        </td>
-        <td class="mono" style="font-size:12px;">
-          ${s.qty.toLocaleString()}<br>
-          <span style="color:var(--text3);font-size:10px;" dir="ltr">${priceStr}</span>
-        </td>
-        <td style="font-size:12px;">${dayHTML}</td>
-        <td class="mono ${cls(totalGain)}" style="font-size:12px;">
-          ${sign(totalGain)}${fmtILS(Math.abs(totalGain))}<br>
-          <span style="font-size:10px;">${totalPct}%</span>
-        </td>
-        <td class="mono" style="font-size:12px;">${fmtILS(s._valILS||s._costILS||0)}${delBtn}</td>
-      </tr>`;
+
+      return `<div class="stock-card" style="position:relative;">
+        ${delBtn}
+        <div class="sc-top">
+          <div>
+            <div class="s-ticker">${s.ticker.replace('.TA','').replace('.L','')} <span class="badge ${s.market.toLowerCase()}">${s.market}</span></div>
+            <div class="s-name">${s.name}</div>
+            <div class="sc-qty">${s.qty.toLocaleString()} מניות · <span dir="ltr">${priceStr}</span>${hasPrice ? ` <span style="color:var(--text3);font-size:10px;">/ ${prevStr}</span>` : ''}</div>
+          </div>
+          <div style="text-align:left;">
+            <div class="sc-val">${fmtILS(valILS)}</div>
+            <div class="sc-val-usd">${fmtUSD(valUSD)}</div>
+          </div>
+        </div>
+        <div class="sc-bottom">
+          <div class="sc-metric">
+            <div class="sc-metric-lbl">יומי %</div>
+            <div class="sc-metric-val ${cls(dayPct)}">${sign(dayPct)}${dayPct.toFixed(2)}%</div>
+          </div>
+          <div class="sc-metric">
+            <div class="sc-metric-lbl">יומי ₪</div>
+            <div class="sc-metric-val ${cls(dayILS)}">${sign(dayILS)}${fmtILS(Math.abs(dayILS))}</div>
+          </div>
+          <div class="sc-metric">
+            <div class="sc-metric-lbl">רווח כולל</div>
+            <div class="sc-metric-val ${cls(gainILS)}">${sign(gainILS)}${fmtILS(Math.abs(gainILS))}<br><span style="font-size:10px;">${sign(gainPct)}${gainPct.toFixed(1)}%</span></div>
+          </div>
+          <div class="sc-metric">
+            <div class="sc-metric-lbl">רווח $</div>
+            <div class="sc-metric-val ${cls(gainUSD)}">${sign(gainUSD)}${fmtUSD(Math.abs(gainUSD))}</div>
+          </div>
+        </div>
+      </div>`;
     }).join('');
   }
 
@@ -848,18 +900,14 @@ function renderPortfolioView() {
         </div>
         <div class="port-nums">
           <div class="port-total">${fmtILS(c.totalILS)}</div>
-          <div class="port-gain ${cls(c.gainILS)}">${sign(c.gainILS)}${fmtILS(c.gainILS)} (${gainPct.toFixed(1)}%)</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--text2);">${fmtUSD(c.totalILS/state.fx.usdils)}</div>
+          <div class="port-gain ${cls(c.gainILS)}">${sign(c.gainILS)}${fmtILS(c.gainILS)} <span style="font-size:10px;">(${gainPct.toFixed(1)}%)</span></div>
           <div class="port-day ${cls(c.dayILS)}">יומי: ${sign(c.dayILS)}${fmtILS(c.dayILS)}</div>
         </div>
       </div>
       ${state.editMode ? `<div class="port-actions">${renameBtn}</div>` : ''}
       ${addFormHTML}
-      <table class="stock-tbl">
-        <thead><tr>
-          <th>מנייה</th><th>כמות / מחיר</th><th>יומי</th><th>רווח כולל</th><th>שווי</th>
-        </tr></thead>
-        <tbody>${stockRows}</tbody>
-      </table>
+      <div class="stocks-list">${stockCardsHTML}</div>
     </div>
     <div style="height:8px;"></div>
   `;
