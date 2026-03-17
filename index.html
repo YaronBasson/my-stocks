@@ -158,19 +158,21 @@ body { display: flex; flex-direction: column; }
 .port-day { font-family: var(--mono); font-size: 11px; color: var(--text2); }
 
 /* STOCK TABLE */
-.stock-tbl { width: 100%; border-collapse: collapse; }
+.stock-tbl { width: 100%; border-collapse: collapse; direction: rtl; }
 .stock-tbl thead { background: var(--bg3); }
 .stock-tbl th {
   font-size: 10px; color: var(--text3); font-weight: 400;
-  padding: 6px 10px; text-align: left;
-  letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 6px 10px; text-align: right;
+  letter-spacing: 0.5px;
 }
-.stock-tbl th:last-child { text-align: left; }
+.stock-tbl th:first-child { text-align: right; }
 .stock-tbl td {
   padding: 10px 10px; font-size: 13px;
   border-top: 0.5px solid var(--border);
   vertical-align: middle;
+  text-align: right;
 }
+.stock-tbl td:first-child { text-align: right; }
 .stock-tbl tr:active { background: var(--bg3); }
 .s-ticker { font-weight: 700; font-size: 13px; font-family: var(--mono); }
 .s-name { font-size: 11px; color: var(--text3); margin-top: 1px; }
@@ -316,7 +318,11 @@ body { display: flex; flex-direction: column; }
 <body>
 
 <div class="topbar">
-  <div class="topbar-title">📊 תיקי מניות <span style="font-size:10px;color:var(--text3);font-weight:400;vertical-align:middle;">v1.4</span></div>
+  <div class="topbar-title" style="display:flex;align-items:center;gap:10px;">
+    <span>📊 תיקי מניות</span>
+    <span id="market-status" style="display:flex;gap:6px;align-items:center;font-size:11px;font-weight:400;"></span>
+    <span style="font-size:10px;color:var(--text3);font-weight:400;">v1.6</span>
+  </div>
   <div class="topbar-right">
     <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
     <div class="icon-btn" onclick="manualRefresh()" title="רענן">⟳</div>
@@ -446,7 +452,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v1.4</div>
+          <div class="lbl">Stock Portfolio Tracker v1.6</div>
         </div>
       </div>
     </div>
@@ -676,7 +682,7 @@ function toILS(price, currency, market) {
 }
 
 function fmtILS(v) {
-  return '₪' + Math.round(v).toLocaleString('he-IL');
+  return '\u20AA' + Math.round(v).toLocaleString('he-IL');
 }
 function fmtUSD(v) {
   return '$' + Math.round(v).toLocaleString('en-US');
@@ -769,19 +775,19 @@ function renderPortfolioView() {
   if (state.editMode) {
     addFormHTML = `<div class="add-form">
       <div class="row">
-        <input type="text" id="ns-ticker" placeholder="סימול (AAPL)" style="direction:ltr;text-transform:uppercase;">
-        <input type="text" id="ns-name" placeholder="שם חברה">
-      </div>
-      <div class="row">
-        <input type="number" id="ns-qty" placeholder="כמות">
-        <input type="number" id="ns-cost" placeholder="עלות / מניה" style="direction:ltr;">
-        <select id="ns-market">
-          <option value="IL">🇮🇱 IL</option>
-          <option value="US">🇺🇸 US</option>
-          <option value="UK">🇬🇧 UK</option>
+        <input type="text" id="ns-ticker" placeholder="סימול: AAPL / TEVA.TA / BP.L" style="direction:ltr;text-transform:uppercase;flex:2;" onfocus="formOpen=true" onblur="formOpen=true">
+        <select id="ns-market" onfocus="formOpen=true" style="flex:1;">
+          <option value="US">🇺🇸 ארה"ב</option>
+          <option value="IL">🇮🇱 ישראל</option>
+          <option value="UK">🇬🇧 לונדון</option>
         </select>
       </div>
-      <button class="btn-primary" onclick="addStockToPort(${state.currentPort})">➕ הוסף מנייה</button>
+      <input type="text" id="ns-name" placeholder="שם החברה" onfocus="formOpen=true" onblur="formOpen=true">
+      <div class="row">
+        <input type="number" id="ns-qty" placeholder="כמות מניות" style="flex:1;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
+        <input type="number" id="ns-cost" placeholder="עלות רכישה למנייה" style="flex:2;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
+      </div>
+      <button class="btn-primary" onclick="addStockToPort(${state.currentPort})">➕ הוסף מנייה לתיק</button>
     </div>`;
   }
 
@@ -806,12 +812,12 @@ function renderPortfolioView() {
         : '';
       return `<tr class="stock-row">
         <td>
-          <div class="s-ticker"><span class="badge ${s.market.toLowerCase()}">${s.market}</span>${s.ticker.replace('.TA','').replace('.L','')}</div>
+          <div class="s-ticker">${s.ticker.replace('.TA','').replace('.L','')} <span class="badge ${s.market.toLowerCase()}">${s.market}</span></div>
           <div class="s-name">${s.name}</div>
         </td>
         <td class="mono" style="font-size:12px;">
           ${s.qty.toLocaleString()}<br>
-          <span style="color:var(--text3);font-size:10px;">${priceStr}</span>
+          <span style="color:var(--text3);font-size:10px;" dir="ltr">${priceStr}</span>
         </td>
         <td style="font-size:12px;">${dayHTML}</td>
         <td class="mono ${cls(totalGain)}" style="font-size:12px;">
@@ -850,7 +856,7 @@ function renderPortfolioView() {
       ${addFormHTML}
       <table class="stock-tbl">
         <thead><tr>
-          <th>מנייה</th><th>כמות</th><th>יומי</th><th>רווח</th><th>שווי ₪</th>
+          <th>מנייה</th><th>כמות / מחיר</th><th>יומי</th><th>רווח כולל</th><th>שווי</th>
         </tr></thead>
         <tbody>${stockRows}</tbody>
       </table>
@@ -941,7 +947,7 @@ function addStockToPort(pIdx) {
   const qty = parseFloat(document.getElementById('ns-qty')?.value);
   const cost = parseFloat(document.getElementById('ns-cost')?.value);
   const market = document.getElementById('ns-market')?.value;
-  if (!ticker || !qty || !cost) { showNotif('יש למלא סימול, כמות ועלות'); return; }
+  if (!ticker || !qty || isNaN(cost)) { showNotif('יש למלא סימול, כמות ועלות (עלות 0 תקינה ל-RSU)'); return; }
   state.portfolios[pIdx].stocks.push({ ticker, name: name || ticker, qty, cost, market: market || 'US' });
   saveState();
   formOpen = false; // allow re-render now
@@ -1177,14 +1183,31 @@ function marketStatusText() {
   return open.length ? `פעיל: ${open.join(' ')}` : '⏸ הבורסות סגורות';
 }
 
+function renderMarketStatus() {
+  const m = openMarkets();
+  const el = document.getElementById('market-status');
+  if (!el) return;
+  const markets = [
+    { key: 'IL', label: 'IL', flag: '🇮🇱' },
+    { key: 'US', label: 'US', flag: '🇺🇸' },
+    { key: 'UK', label: 'UK', flag: '🇬🇧' },
+  ];
+  el.innerHTML = markets.map(mk => `
+    <span style="display:flex;align-items:center;gap:3px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:${m[mk.key] ? 'var(--green)' : '#444'};
+        ${m[mk.key] ? 'box-shadow:0 0 5px var(--green);' : ''}
+        display:inline-block;flex-shrink:0;"></span>
+      <span style="color:${m[mk.key] ? 'var(--text)' : 'var(--text3)'};">${mk.flag}${mk.label}</span>
+    </span>
+  `).join('');
+}
+
 // Override renderRateBar to include market status
 function renderRateBar() {
-  const status = marketStatusText();
-  const statusColor = anyMarketOpen() ? 'var(--green)' : 'var(--text3)';
+  renderMarketStatus();
   document.getElementById('rate-bar').innerHTML =
     `<span>USD/ILS <span>${state.fx.usdils.toFixed(2)}</span></span>
      <span>GBP/ILS <span>${state.fx.gbpils.toFixed(2)}</span></span>
-     <span style="color:${statusColor};font-size:11px;">${status}</span>
      <span style="color:var(--text3)">${new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</span>`;
 }
 
@@ -1261,6 +1284,7 @@ loadState();
 loadLastPrices();
 document.getElementById('api-key-input').value = state.apiKey || '';
 renderAll(); // render immediately — no loading screen
+renderMarketStatus();
 
 fetchFX().then(() => {
   smartRefresh();
