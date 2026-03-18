@@ -327,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v4.1</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v4.2</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -473,7 +473,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v4.1</div>
+          <div class="lbl">Stock Portfolio Tracker v4.2</div>
         </div>
       </div>
     </div>
@@ -1143,63 +1143,90 @@ async function addStockToPort(pIdx) {
   const cost = parseFloat(document.getElementById('ns-cost')?.value);
   const selectedMarket = document.getElementById('ns-market')?.value;
   const costCurrency = document.getElementById('ns-cost-currency')?.value || null;
+
   if (!rawTicker || !qty || isNaN(cost)) {
     showNotif('יש למלא סימול, כמות ועלות (עלות 0 תקינה ל-RSU)');
     return;
   }
 
   const btn = document.querySelector(`button[onclick="addStockToPort(${pIdx})"]`);
-  if (btn) btn.textContent = 'מזהה...';
+  const form = btn?.closest('.add-form');
+
+  function setStatus(msg, color) {
+    if (btn) {
+      btn.textContent = msg;
+      btn.style.background = color || 'var(--green)';
+    }
+    if (form) form.style.opacity = '0.7';
+  }
+
+  setStatus('⏳ מזהה בורסה...', '#888');
 
   let ticker = rawTicker;
   let market = selectedMarket;
 
-  // Auto-detect market from suffix
   if (rawTicker.endsWith('.TA')) {
     market = 'IL';
   } else if (rawTicker.endsWith('.L')) {
     market = 'UK';
   } else if (!rawTicker.includes('.')) {
-    // No suffix -- try TASE first by appending .TA and checking Yahoo
-    if (btn) btn.textContent = 'בודק...';
+    setStatus('⏳ בודק TASE...', '#888');
     const taTest = await fetchREST(rawTicker + '.TA', 'IL');
     if (taTest && taTest.price && taTest.price > 0) {
-      // Found on TASE
       ticker = rawTicker + '.TA';
       market = 'IL';
+      setStatus('✓ נמצא ב-TASE', '#1D9E75');
+      await new Promise(r => setTimeout(r, 400));
     } else {
-      // Default to US
       market = 'US';
+      setStatus('✓ מנייה אמריקאית', '#185FA5');
+      await new Promise(r => setTimeout(r, 300));
     }
   }
 
-  // Auto-detect name and currency from API
   let autoName = nameInput;
   let autoCostCurrency = costCurrency || null;
 
-  if (btn) btn.textContent = 'מזהה...';
-  // Fetch price to get API currency
+  setStatus('⏳ שולף מחיר...', '#888');
   const priceData = await fetchREST(ticker, market);
   if (priceData) {
     state.prices[ticker] = { price: priceData.price, prev: priceData.prev || priceData.price, currency: priceData.currency, t: Date.now() };
-    // For UK stocks: if API says USD, cost should be in USD not GBp
     if (market === 'UK' && priceData.currency === 'USD' && !costCurrency) {
       autoCostCurrency = 'USD';
     }
+    const priceDisplay = priceData.price.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+    setStatus(`✓ מחיר: ${priceDisplay}`, '#1D9E75');
+    await new Promise(r => setTimeout(r, 400));
+  } else {
+    setStatus('⚠ מחיר לא נמצא', '#f0a500');
+    await new Promise(r => setTimeout(r, 400));
   }
 
   if (!autoName) {
-    if (btn) btn.textContent = 'מחפש שם...';
+    setStatus('⏳ מחפש שם חברה...', '#888');
     autoName = await autoDetectName(ticker, market);
+    if (autoName) {
+      setStatus(`✓ ${autoName.slice(0,20)}`, '#1D9E75');
+      await new Promise(r => setTimeout(r, 300));
+    }
   }
+
+  setStatus('✓ מוסיף לתיק...', '#1D9E75');
+  await new Promise(r => setTimeout(r, 200));
 
   state.portfolios[pIdx].stocks.push({ ticker, name: autoName || ticker, qty, cost, market, costCurrency: autoCostCurrency });
   saveState();
   formOpen = false;
+  if (form) form.style.opacity = '1';
+
   fetchAllPrices().then(() => renderAll());
   const curLabel = autoCostCurrency === 'USD' ? '($)' : autoCostCurrency === 'ILS' ? '(₪)' : autoCostCurrency === 'GBp' ? '(GBp)' : market === 'IL' ? '(אג)' : market === 'US' ? '($)' : '(GBp)';
   showNotif(`${ticker} נוסף ${curLabel} – ${autoName || ticker} ✓`);
-  if (btn) btn.textContent = '+ הוסף מנייה';
+
+  if (btn) {
+    btn.textContent = '+ הוסף מנייה';
+    btn.style.background = 'var(--green)';
+  }
   if (market === 'US' && ws && ws.readyState === 1) {
     ws.send(JSON.stringify({ type:'subscribe', symbol: ticker }));
   }
