@@ -126,6 +126,13 @@ body { display: flex; flex-direction: column; }
   color: var(--text2); font-size: 15px;
 }
 .nav-arrow:active { background: var(--bg2); }
+.sort-btn {
+  background: var(--bg3); border: 0.5px solid var(--border2);
+  border-radius: 6px; padding: 3px 10px; cursor: pointer;
+  color: var(--text2); font-size: 11px; font-family: var(--sans);
+}
+.sort-btn.active { background: var(--text); color: var(--bg2); border-color: var(--text); }
+.sort-btn:active { opacity: 0.7; }
 
 /* PORTFOLIO CARD */
 .port-card {
@@ -320,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v3.6</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v3.7</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -369,6 +376,13 @@ body { display: flex; flex-direction: column; }
       <button class="nav-arrow" onclick="prevPort()">‹</button>
       <div class="p-dots" id="p-dots"></div>
       <button class="nav-arrow" onclick="nextPort()">›</button>
+    </div>
+    <div style="display:flex;gap:4px;padding:0 10px 6px;direction:rtl;">
+      <span style="font-size:10px;color:var(--text3);align-self:center;">מיון:</span>
+      <button id="sort-none" onclick="setSort('none')" class="sort-btn active">רגיל</button>
+      <button id="sort-name" onclick="setSort('name')" class="sort-btn">שם</button>
+      <button id="sort-value" onclick="setSort('value')" class="sort-btn">שווי</button>
+      <button id="sort-gain" onclick="setSort('gain')" class="sort-btn">רווח</button>
     </div>
     <div class="swipe-hint">החלק לתיק הבא ←</div>
     <div id="port-view" style="touch-action: pan-y;"></div>
@@ -459,7 +473,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v3.6</div>
+          <div class="lbl">Stock Portfolio Tracker v3.7</div>
         </div>
       </div>
     </div>
@@ -482,14 +496,7 @@ body { display: flex; flex-direction: column; }
     סיכום
   </div>
   <div class="nav-item" id="nav-settings" onclick="switchTab('settings')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    הגדרות
-  </div>
-</div>
-
-<div class="notif-banner" id="notif-banner"></div>
-
-<script>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 
 const STORAGE_KEY = 'portfolioApp_v2';
 const DEFAULT_API_KEY = '';
 
@@ -525,6 +532,7 @@ let state = {
 };
 
 let ws = null;
+let sortBy = 'none'; // 'none' | 'name' | 'value' | 'gain'
 let wsReconnectTimer = null;
 let deferredInstall = null;
 let alertFormOpen = false;
@@ -876,7 +884,21 @@ function renderPortfolioView() {
       <button class="btn-sm" onclick="state.editMode=true;renderPortfolioView();">+ \u05D4\u05D5\u05E1\u05E3 \u05DE\u05E0\u05D9\u05D9\u05D4</button>
     </div>`;
   } else {
-    stockCardsHTML = p.stocks.map((s, si) => {
+    // Sort stocks
+    let sortedStocks = p.stocks.map((s, i) => ({ s, i }));
+    if (sortBy === 'name') {
+      sortedStocks.sort((a, b) => a.s.name.localeCompare(b.s.name));
+    } else if (sortBy === 'value') {
+      sortedStocks.sort((a, b) => (b.s._valILS || 0) - (a.s._valILS || 0));
+    } else if (sortBy === 'gain') {
+      sortedStocks.sort((a, b) => {
+        const gainA = (a.s._valILS || 0) - (a.s._costILS || 0);
+        const gainB = (b.s._valILS || 0) - (b.s._costILS || 0);
+        return gainB - gainA;
+      });
+    }
+    stockCardsHTML = sortedStocks.map(({ s, si: origIdx }) => {
+      const si = origIdx;
       const hasPrice = s._price != null && s._price > 0;
       const priceStr = hasPrice ? s._price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '\u2014';
       const priceChangeRaw = hasPrice && s._prev ? (s._price - s._prev) : 0;
@@ -1048,6 +1070,14 @@ function switchTab(tab) {
 function prevPort() { gotoPort((state.currentPort - 1 + state.portfolios.length) % state.portfolios.length); }
 function nextPort() { gotoPort((state.currentPort + 1) % state.portfolios.length); }
 function gotoPort(i) { state.currentPort = i; renderPortfolioView(); }
+
+function setSort(s) {
+  sortBy = s;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('sort-' + s);
+  if (btn) btn.classList.add('active');
+  renderPortfolioView();
+}
 
 function toggleEdit() {
   state.editMode = !state.editMode;
@@ -1579,6 +1609,20 @@ document.getElementById('api-key-input').value = state.apiKey || '';
 renderAll(); // render immediately \u2014 no loading screen
 renderMarketStatus();
 renderApiKeyIndicator();
+
+fetchFX().then(() => {
+  smartRefresh();
+  smartConnectWS();
+}).catch(() => {
+  renderRateBar();
+  renderAll();
+});
+
+// If no API key \u2014 show hint
+if (!state.apiKey) {
+  setTimeout(() => showNotif('\u05D4\u05DB\u05E0\u05E1 Finnhub API key \u05D1\u05D4\u05D2\u05D3\u05E8\u05D5\u05EA \u2699'), 800);
+}
+derApiKeyIndicator();
 
 fetchFX().then(() => {
   smartRefresh();
