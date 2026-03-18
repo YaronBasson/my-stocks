@@ -227,7 +227,7 @@ body { display: flex; flex-direction: column; }
 }
 .stocks-list { display: flex; flex-direction: column; }
 .stock-card {
-  padding: 8px 10px;
+  padding: 6px 10px;
   border-top: 0.5px solid var(--border);
 }
 .stock-card:active { background: var(--bg3); }
@@ -320,7 +320,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v3.4</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v3.5</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -459,7 +459,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v3.4</div>
+          <div class="lbl">Stock Portfolio Tracker v3.5</div>
         </div>
       </div>
     </div>
@@ -873,96 +873,69 @@ function renderPortfolioView() {
   } else {
     stockCardsHTML = p.stocks.map((s, si) => {
       const hasPrice = s._price != null && s._price > 0;
-
-      // Current price
-      const priceStr = hasPrice
-        ? s._price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
-        : '\u2014';
-
-      // Price change from yesterday (per share, in original currency)
+      const priceStr = hasPrice ? s._price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '\u2014';
       const priceChangeRaw = hasPrice && s._prev ? (s._price - s._prev) : 0;
-      const priceChangeSgn = priceChangeRaw >= 0 ? '+' : '';
+      const priceCurSymbol = s._apiCurrency === 'GBp' ? 'p' : s._apiCurrency === 'GBP' ? '\u00A3' : s._apiCurrency === 'ILS' ? '\u20AA' : '$';
 
-      // Values
       const valILS = s._valILS || s._costILS || 0;
       const valUSD = valILS / state.fx.usdils;
       const costILS = s._costILS || 0;
       const costUSD = costILS / state.fx.usdils;
-
-      // Daily change
       const dayILS = s._dayILS || 0;
       const dayUSD = dayILS / state.fx.usdils;
       const dayPct = s._dayPct || 0;
-      const dayColor = dayILS >= 0 ? 'var(--green)' : 'var(--red)';
-
-      // Total gain
       const gainILS = valILS - costILS;
       const gainUSD = gainILS / state.fx.usdils;
       const gainPct = costILS > 0 ? ((gainILS / costILS) * 100) : 0;
+
+      const dayColor = dayILS >= 0 ? 'var(--green)' : 'var(--red)';
       const gainColor = gainILS >= 0 ? 'var(--green)' : 'var(--red)';
+      const costCurSymbol = s.costCurrency === 'ILS' ? '\u20AA' : s.costCurrency === 'GBp' ? 'p' : s.costCurrency === 'GBP' ? '\u00A3' : '$';
 
-      // Cost per share display
-      const costPerShareStr = s.cost > 0
-        ? s.cost.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
-        : 'RSU';
-      const costCurLabel = s.costCurrency === 'ILS' ? '\u20AA'
-        : s.costCurrency === 'GBp' ? 'GBp'
-        : s.costCurrency === 'GBP' ? '\u00A3'
-        : '$';
-
-      const delBtn = state.editMode
-        ? `<div style="display:flex;gap:4px;margin-bottom:6px;">
-            <button onclick="editStock(${state.currentPort},${si})"
-              style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);border-radius:5px;padding:3px 0;font-size:11px;cursor:pointer;color:var(--text2);">\u05E2\u05E8\u05D5\u05DA</button>
-            <button onclick="removeStock(${state.currentPort},${si})"
-              style="flex:1;background:none;border:0.5px solid var(--red);border-radius:5px;padding:3px 0;font-size:11px;cursor:pointer;color:var(--red);">\u05DE\u05D7\u05E7</button>
+      const editBtns = state.editMode
+        ? `<div style="display:flex;gap:3px;margin-top:4px;">
+            <button onclick="editStock(${state.currentPort},${si})" style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);border-radius:4px;padding:2px 0;font-size:10px;cursor:pointer;color:var(--text2);">\u05E2\u05E8\u05D5\u05DA</button>
+            <button onclick="removeStock(${state.currentPort},${si})" style="flex:1;background:none;border:0.5px solid var(--red);border-radius:4px;padding:2px 0;font-size:10px;cursor:pointer;color:var(--red);">\u05DE\u05D7\u05E7</button>
           </div>`
         : '';
 
       return `<div class="stock-card" id="stock-card-${state.currentPort}-${si}">
-        ${delBtn}
+        <div style="display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr);gap:6px;align-items:center;">
 
-        <!-- ROW 1: ticker + name left, current price right -->
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+          <!-- COL 1: ticker + name + price + cost info -->
           <div>
-            <span class="s-ticker">${s.ticker.replace('.TA','').replace('.L','')} <span class="badge ${s.market.toLowerCase()}">${s.market}</span></span>
-            <div class="s-name">${s.name}</div>
-            <!-- Cost per share near ticker -->
-            <div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono);">
-              \u05E2\u05DC\u05D5\u05EA: ${s.qty.toLocaleString()} \u05D9\u05D7' \u00D7 ${costCurLabel}${costPerShareStr}
+            <div style="display:flex;align-items:center;gap:4px;">
+              <span class="s-ticker">${s.ticker.replace('.TA','').replace('.L','')} <span class="badge ${s.market.toLowerCase()}">${s.market}</span></span>
+              <span style="font-family:var(--mono);font-size:11px;font-weight:600;" dir="ltr">${priceCurSymbol}${priceStr}</span>
+              ${hasPrice ? `<span style="font-family:var(--mono);font-size:10px;color:${priceChangeRaw >= 0 ? 'var(--green)' : 'var(--red)'};" dir="ltr">${priceChangeRaw >= 0 ? '+' : ''}${priceChangeRaw.toFixed(2)}</span>` : ''}
             </div>
+            <div style="font-size:10px;color:var(--text3);margin-top:1px;">${s.name}</div>
+            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);">${s.qty.toLocaleString()} \u00D7 ${costCurSymbol}${s.cost > 0 ? s.cost.toFixed(2) : 'RSU'}</div>
+            ${editBtns}
           </div>
+
+          <!-- COL 2: purchase cost -->
           <div style="text-align:left;">
-            <div style="font-family:var(--mono);font-size:16px;font-weight:600;color:var(--text);" dir="ltr">${hasPrice ? (s._apiCurrency === 'GBp' ? priceStr + 'p' : (s._apiCurrency === 'USD' || !s._apiCurrency ? '$' : '') + priceStr) : '\u2014'}</div>
-            ${hasPrice ? `<div style="font-family:var(--mono);font-size:10px;color:${priceChangeRaw >= 0 ? 'var(--green)' : 'var(--red)'};" dir="ltr">${priceChangeSgn}${priceChangeRaw.toFixed(2)}</div>` : ''}
-          </div>
-        </div>
-
-        <!-- ROW 2: 3 metric boxes -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
-
-          <!-- Box 1: Purchase cost -->
-          <div style="background:var(--bg3);border-radius:6px;padding:5px 7px;">
-            <div style="font-size:9px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;">\u05E2\u05DC\u05D5\u05EA \u05E7\u05E0\u05D9\u05D9\u05D4</div>
-            <div style="font-family:var(--mono);font-size:12px;font-weight:500;">${fmtILS(costILS)}</div>
+            <div style="font-size:9px;color:var(--text3);">\u05E2\u05DC\u05D5\u05EA</div>
+            <div style="font-family:var(--mono);font-size:11px;font-weight:500;">${fmtILS(costILS)}</div>
             <div style="font-family:var(--mono);font-size:10px;color:var(--text2);">${fmtUSD(costUSD)}</div>
           </div>
 
-          <!-- Box 2: Daily change -->
-          <div style="background:var(--bg3);border-radius:6px;padding:5px 7px;">
-            <div style="font-size:9px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;">\u05E9\u05D9\u05E0\u05D5\u05D9 \u05D9\u05D5\u05DE\u05D9</div>
+          <!-- COL 3: daily change -->
+          <div style="text-align:left;">
+            <div style="font-size:9px;color:var(--text3);">\u05D9\u05D5\u05DE\u05D9</div>
             <div style="font-family:var(--mono);font-size:11px;font-weight:500;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${fmtILS(dayILS)}</div>
             <div style="font-family:var(--mono);font-size:10px;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${fmtUSD(Math.abs(dayUSD))}</div>
             <div style="font-family:var(--mono);font-size:10px;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${dayPct.toFixed(2)}%</div>
           </div>
 
-          <!-- Box 3: Total value & gain -->
-          <div style="background:var(--bg3);border-radius:6px;padding:5px 7px;">
-            <div style="font-size:9px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;">\u05E9\u05D5\u05D5\u05D9 \u05DB\u05D5\u05DC\u05DC</div>
-            <div style="font-family:var(--mono);font-size:12px;font-weight:600;">${fmtILS(valILS)}</div>
+          <!-- COL 4: total value (BIG) + gain -->
+          <div style="text-align:left;">
+            <div style="font-size:9px;color:var(--text3);">\u05E9\u05D5\u05D5\u05D9</div>
+            <div style="font-family:var(--mono);font-size:13px;font-weight:700;">${fmtILS(valILS)}</div>
             <div style="font-family:var(--mono);font-size:10px;color:var(--text2);">${fmtUSD(valUSD)}</div>
-            <div style="font-family:var(--mono);font-size:10px;font-weight:500;color:${gainColor};margin-top:3px;">${gainILS >= 0 ? '+' : ''}${fmtILS(gainILS)}</div>
-            <div style="font-family:var(--mono);font-size:10px;color:${gainColor};">${gainILS >= 0 ? '+' : ''}${fmtUSD(Math.abs(gainUSD))} (${gainILS >= 0 ? '+' : ''}${gainPct.toFixed(1)}%)</div>
+            <div style="font-family:var(--mono);font-size:10px;color:${gainColor};">${gainILS >= 0 ? '+' : ''}${fmtILS(gainILS)} (${gainILS >= 0 ? '+' : ''}${gainPct.toFixed(1)}%)</div>
+            <div style="font-family:var(--mono);font-size:10px;color:${gainColor};">${gainILS >= 0 ? '+' : ''}${fmtUSD(Math.abs(gainUSD))}</div>
           </div>
 
         </div>
