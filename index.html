@@ -107,15 +107,7 @@ body { display: flex; flex-direction: column; }
 .total-pill .lbl { color: var(--text3); font-size: 10px; }
 
 /* RATE BAR */
-.rate-bar {
-  margin: 0 10px 6px;
-  background: var(--bg3);
-  border-radius: var(--r);
-  padding: 5px 10px;
-  display: flex; gap: 16px; flex-wrap: wrap;
-  font-family: var(--mono); font-size: 11px; color: var(--text2);
-}
-.rate-bar span { color: var(--text); }
+
 
 /* PORTFOLIO DOTS NAV */
 .portfolio-nav {
@@ -328,7 +320,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v3.2</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v3.4</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -349,29 +341,28 @@ body { display: flex; flex-direction: column; }
   <!-- PORTFOLIOS TAB -->
   <div id="tab-portfolios">
     <div class="total-card" id="total-card">
-      <div class="total-label">סה״כ כל התיקים</div>
-      <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+        <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">סה"כ כל התיקים</span>
+        <span style="font-size:10px;color:var(--text3);" id="rate-bar">טוען...</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;">
         <div class="total-ils mono" id="t-ils">—</div>
         <div class="total-usd mono" id="t-usd"></div>
       </div>
-      <div class="total-row">
-        <div class="total-pill">
-          <span class="lbl">יומי</span>
-          <span id="t-day">—</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:5px;">
+        <div style="background:var(--bg3);border-radius:5px;padding:4px 6px;">
+          <div style="font-size:9px;color:var(--text3);">יומי</div>
+          <div id="t-day" style="font-family:var(--mono);font-size:11px;">—</div>
         </div>
-        <div class="total-pill">
-          <span class="lbl">סה״כ</span>
-          <span id="t-gain">—</span>
+        <div style="background:var(--bg3);border-radius:5px;padding:4px 6px;">
+          <div style="font-size:9px;color:var(--text3);">רווח כולל</div>
+          <div id="t-gain" style="font-family:var(--mono);font-size:11px;">—</div>
         </div>
-        <div class="total-pill">
-          <span class="lbl">תשואה</span>
-          <span id="t-pct">—</span>
+        <div style="background:var(--bg3);border-radius:5px;padding:4px 6px;">
+          <div style="font-size:9px;color:var(--text3);">תשואה</div>
+          <div id="t-pct" style="font-family:var(--mono);font-size:11px;">—</div>
         </div>
       </div>
-    </div>
-
-    <div class="rate-bar" id="rate-bar">
-      טוען שערים...
     </div>
 
     <div class="portfolio-nav">
@@ -468,7 +459,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v3.2</div>
+          <div class="lbl">Stock Portfolio Tracker v3.4</div>
         </div>
       </div>
     </div>
@@ -794,6 +785,7 @@ function computePortfolio(p) {
       s._dayPct = prevVal > 0 ? ((val - prevVal) / prevVal * 100) : 0;
       s._price = price;
       s._prev = prev;
+      s._apiCurrency = cur || (s.market === 'IL' ? 'ILS' : s.market === 'US' ? 'USD' : 'GBp');
       totalILS += val; costILS += cost; dayILS += val - prevVal;
     } else {
       const est = costToILS(s.cost, s.market, s.costCurrency) * s.qty;
@@ -882,74 +874,95 @@ function renderPortfolioView() {
     stockCardsHTML = p.stocks.map((s, si) => {
       const hasPrice = s._price != null && s._price > 0;
 
+      // Current price
       const priceStr = hasPrice
         ? s._price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
         : '\u2014';
 
+      // Price change from yesterday (per share, in original currency)
+      const priceChangeRaw = hasPrice && s._prev ? (s._price - s._prev) : 0;
+      const priceChangeSgn = priceChangeRaw >= 0 ? '+' : '';
+
+      // Values
       const valILS = s._valILS || s._costILS || 0;
       const valUSD = valILS / state.fx.usdils;
+      const costILS = s._costILS || 0;
+      const costUSD = costILS / state.fx.usdils;
 
+      // Daily change
       const dayILS = s._dayILS || 0;
       const dayUSD = dayILS / state.fx.usdils;
       const dayPct = s._dayPct || 0;
-
-      const gainILS = valILS - (s._costILS || 0);
-      const gainUSD = gainILS / state.fx.usdils;
-      const gainPct = s._costILS > 0 ? ((gainILS / s._costILS) * 100) : 0;
-
-      const costPerShare = s.cost;
-      const costStr = costPerShare > 0
-        ? costPerShare.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
-        : '\u05D7\u05D9\u05E0\u05DD (RSU)';
-
       const dayColor = dayILS >= 0 ? 'var(--green)' : 'var(--red)';
+
+      // Total gain
+      const gainILS = valILS - costILS;
+      const gainUSD = gainILS / state.fx.usdils;
+      const gainPct = costILS > 0 ? ((gainILS / costILS) * 100) : 0;
       const gainColor = gainILS >= 0 ? 'var(--green)' : 'var(--red)';
 
+      // Cost per share display
+      const costPerShareStr = s.cost > 0
+        ? s.cost.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+        : 'RSU';
+      const costCurLabel = s.costCurrency === 'ILS' ? '\u20AA'
+        : s.costCurrency === 'GBp' ? 'GBp'
+        : s.costCurrency === 'GBP' ? '\u00A3'
+        : '$';
+
       const delBtn = state.editMode
-        ? `<div style="position:absolute;top:6px;left:6px;display:flex;gap:4px;">
+        ? `<div style="display:flex;gap:4px;margin-bottom:6px;">
             <button onclick="editStock(${state.currentPort},${si})"
-              style="background:var(--bg3);border:0.5px solid var(--border2);border-radius:5px;padding:2px 7px;font-size:11px;cursor:pointer;color:var(--text2);">\u05E2\u05E8\u05D5\u05DA</button>
+              style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);border-radius:5px;padding:3px 0;font-size:11px;cursor:pointer;color:var(--text2);">\u05E2\u05E8\u05D5\u05DA</button>
             <button onclick="removeStock(${state.currentPort},${si})"
-              style="background:none;border:0.5px solid var(--red);border-radius:5px;padding:2px 7px;font-size:11px;cursor:pointer;color:var(--red);">\u05DE\u05D7\u05E7</button>
+              style="flex:1;background:none;border:0.5px solid var(--red);border-radius:5px;padding:3px 0;font-size:11px;cursor:pointer;color:var(--red);">\u05DE\u05D7\u05E7</button>
           </div>`
         : '';
 
-      const priceChangeVal = hasPrice && s._prev ? (s._price - s._prev) : 0;
-      const priceChangeSgn = priceChangeVal >= 0 ? '+' : '';
-
-      return `<div class="stock-card" id="stock-card-${state.currentPort}-${si}" style="position:relative;">
+      return `<div class="stock-card" id="stock-card-${state.currentPort}-${si}">
         ${delBtn}
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+
+        <!-- ROW 1: ticker + name left, current price right -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
           <div>
-            <div class="s-ticker">${s.ticker.replace('.TA','').replace('.L','')} <span class="badge ${s.market.toLowerCase()}">${s.market}</span></div>
+            <span class="s-ticker">${s.ticker.replace('.TA','').replace('.L','')} <span class="badge ${s.market.toLowerCase()}">${s.market}</span></span>
             <div class="s-name">${s.name}</div>
+            <!-- Cost per share near ticker -->
+            <div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono);">
+              \u05E2\u05DC\u05D5\u05EA: ${s.qty.toLocaleString()} \u05D9\u05D7' \u00D7 ${costCurLabel}${costPerShareStr}
+            </div>
           </div>
           <div style="text-align:left;">
-            <div style="font-family:var(--mono);font-size:15px;font-weight:600;" dir="ltr">${priceStr}</div>
-            ${hasPrice ? `<div style="font-family:var(--mono);font-size:10px;color:${dayColor};" dir="ltr">${priceChangeSgn}${priceChangeVal.toFixed(2)}</div>` : ''}
+            <div style="font-family:var(--mono);font-size:16px;font-weight:600;color:var(--text);" dir="ltr">${hasPrice ? (s._apiCurrency === 'GBp' ? priceStr + 'p' : (s._apiCurrency === 'USD' || !s._apiCurrency ? '$' : '') + priceStr) : '\u2014'}</div>
+            ${hasPrice ? `<div style="font-family:var(--mono);font-size:10px;color:${priceChangeRaw >= 0 ? 'var(--green)' : 'var(--red)'};" dir="ltr">${priceChangeSgn}${priceChangeRaw.toFixed(2)}</div>` : ''}
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:10px;">
+        <!-- ROW 2: 3 metric boxes -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
 
+          <!-- Box 1: Purchase cost -->
           <div style="background:var(--bg3);border-radius:6px;padding:5px 7px;">
-            <div style="color:var(--text3);margin-bottom:2px;">\u05DE\u05D7\u05D9\u05E8 \u05E7\u05E0\u05D9\u05D9\u05D4</div>
-            <div style="font-family:var(--mono);font-size:10px;" dir="ltr">${s.qty.toLocaleString()} \u00D7 ${costStr}</div>
-            <div style="font-family:var(--mono);font-size:11px;font-weight:500;">${fmtILS(s._costILS||0)}</div>
+            <div style="font-size:9px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;">\u05E2\u05DC\u05D5\u05EA \u05E7\u05E0\u05D9\u05D9\u05D4</div>
+            <div style="font-family:var(--mono);font-size:12px;font-weight:500;">${fmtILS(costILS)}</div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--text2);">${fmtUSD(costUSD)}</div>
           </div>
 
+          <!-- Box 2: Daily change -->
           <div style="background:var(--bg3);border-radius:6px;padding:5px 7px;">
-            <div style="color:var(--text3);margin-bottom:2px;">\u05E9\u05D9\u05E0\u05D5\u05D9 \u05D9\u05D5\u05DE\u05D9</div>
+            <div style="font-size:9px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;">\u05E9\u05D9\u05E0\u05D5\u05D9 \u05D9\u05D5\u05DE\u05D9</div>
             <div style="font-family:var(--mono);font-size:11px;font-weight:500;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${fmtILS(dayILS)}</div>
-            <div style="font-family:var(--mono);font-size:10px;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${fmtUSD(Math.abs(dayUSD))} / ${dayILS >= 0 ? '+' : ''}${dayPct.toFixed(2)}%</div>
+            <div style="font-family:var(--mono);font-size:10px;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${fmtUSD(Math.abs(dayUSD))}</div>
+            <div style="font-family:var(--mono);font-size:10px;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${dayPct.toFixed(2)}%</div>
           </div>
 
+          <!-- Box 3: Total value & gain -->
           <div style="background:var(--bg3);border-radius:6px;padding:5px 7px;">
-            <div style="color:var(--text3);margin-bottom:2px;">\u05E9\u05D5\u05D5\u05D9 \u05DB\u05D5\u05DC\u05DC</div>
-            <div style="font-family:var(--mono);font-size:11px;font-weight:500;">${fmtILS(valILS)}</div>
+            <div style="font-size:9px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;">\u05E9\u05D5\u05D5\u05D9 \u05DB\u05D5\u05DC\u05DC</div>
+            <div style="font-family:var(--mono);font-size:12px;font-weight:600;">${fmtILS(valILS)}</div>
             <div style="font-family:var(--mono);font-size:10px;color:var(--text2);">${fmtUSD(valUSD)}</div>
-            <div style="font-family:var(--mono);font-size:10px;font-weight:500;color:${gainColor};margin-top:2px;">${gainILS >= 0 ? '+' : ''}${fmtILS(gainILS)} (${gainILS >= 0 ? '+' : ''}${gainPct.toFixed(1)}%)</div>
-            <div style="font-family:var(--mono);font-size:10px;color:${gainColor};">${gainILS >= 0 ? '+' : ''}${fmtUSD(Math.abs(gainUSD))}</div>
+            <div style="font-family:var(--mono);font-size:10px;font-weight:500;color:${gainColor};margin-top:3px;">${gainILS >= 0 ? '+' : ''}${fmtILS(gainILS)}</div>
+            <div style="font-family:var(--mono);font-size:10px;color:${gainColor};">${gainILS >= 0 ? '+' : ''}${fmtUSD(Math.abs(gainUSD))} (${gainILS >= 0 ? '+' : ''}${gainPct.toFixed(1)}%)</div>
           </div>
 
         </div>
@@ -1506,14 +1519,10 @@ function renderMarketStatus() {
 function renderRateBar() {
   renderMarketStatus();
   renderApiKeyIndicator();
-  const apiWarn = !state.apiKey
-    ? `<span style="color:var(--red);font-size:11px;">\u26A0 \u05D7\u05E1\u05E8 API key</span>`
-    : '';
-  document.getElementById('rate-bar').innerHTML =
-    `<span>USD/ILS <span>${state.fx.usdils.toFixed(2)}</span></span>
-     <span>GBP/ILS <span>${state.fx.gbpils.toFixed(2)}</span></span>
-     <span style="color:var(--text3)">${new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</span>
-     ${apiWarn}`;
+  const el = document.getElementById('rate-bar');
+  if (!el) return;
+  const t = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  el.innerHTML = `${t} \u00B7 GBP/ILS ${state.fx.gbpils.toFixed(2)} \u00B7 USD/ILS ${state.fx.usdils.toFixed(2)}`;
 }
 
 // Save last known prices to localStorage so they survive app close
