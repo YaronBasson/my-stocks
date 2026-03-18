@@ -327,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v4.4</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v4.6</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -474,7 +474,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v4.4</div>
+          <div class="lbl">Stock Portfolio Tracker v4.6</div>
         </div>
       </div>
     </div>
@@ -722,20 +722,18 @@ function toILS(price, currency, market) {
   // API currency takes priority -- always use it if available
   if (currency) {
     const c = currency.toUpperCase();
-    if (['ILS','ILA','ILX'].includes(c)) return price;
+    if (c === 'ILS' || c === 'ILX') return price;           // shekels -> shekels
+    if (c === 'ILA') return price / 100;                     // agorot -> shekels
     if (c === 'USD') return price * state.fx.usdils;
     if (c === 'GBP') return price * state.fx.gbpils;
-    // GBp / GBX = pence (divide by 100 to get GBP first)
-    if (c === 'GBP' || c === 'GBX') return price * state.fx.gbpils / 100;
-    if (currency === 'GBp') return price * state.fx.gbpils / 100;
-    // EUR
+    if (c === 'GBX') return price * state.fx.gbpils / 100;  // GBX pence -> ILS
+    if (currency === 'GBp') return price * state.fx.gbpils / 100; // GBp pence -> ILS
     if (c === 'EUR') return price * (state.fx.usdils / (state.fx.eurUsd || 1.08));
   }
-  // Fallback to market (when no API currency -- e.g. cost entered by user)
-  if (market === 'IL') return price;
+  // Fallback to market (no API currency -- cost entered by user)
+  if (market === 'IL') return price;   // user enters shekels
   if (market === 'US') return price * state.fx.usdils;
-  // UK fallback: assume GBp (pence) for LSE stocks
-  if (market === 'UK') return price * state.fx.gbpils / 100;
+  if (market === 'UK') return price * state.fx.gbpils / 100; // pence
   return price;
 }
 
@@ -909,8 +907,18 @@ function renderPortfolioView() {
     }
     stockCardsHTML = sortedStocks.map(({ s, si }) => {
       const hasPrice = s._price != null && s._price > 0;
-      const priceStr = hasPrice ? s._price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
-      const priceChangeRaw = hasPrice && s._prev ? (s._price - s._prev) : 0;
+      // If API returns agorot (ILA), display as shekels (/100)
+  const displayPrice = hasPrice
+    ? (s._apiCurrency === 'ILA' ? s._price / 100 : s._price)
+    : null;
+  const priceStr = displayPrice != null
+    ? displayPrice.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+    : '—';
+      const priceChangeRaw = hasPrice && s._prev
+    ? (s._apiCurrency === 'ILA'
+        ? (s._price - s._prev) / 100
+        : (s._price - s._prev))
+    : 0;
       const priceCurSymbol = s._apiCurrency === 'GBp' ? 'p' : s._apiCurrency === 'GBP' ? '£' : s._apiCurrency === 'ILS' ? '₪' : '$';
 
       const valILS = s._valILS || s._costILS || 0;
@@ -1172,6 +1180,12 @@ async function addStockToPort(pIdx) {
     market = 'IL';
   } else if (rawTicker.endsWith('.L')) {
     market = 'UK';
+  } else if (/^\d+$/.test(rawTicker)) {
+    // Pure number = Israeli stock (TASE uses numeric codes)
+    ticker = rawTicker + '.TA';
+    market = 'IL';
+    setStatus('✓ מנייה ישראלית (TASE)', '#1D9E75');
+    await new Promise(r => setTimeout(r, 300));
   } else if (!rawTicker.includes('.')) {
     setStatus('⏳ בודק TASE...', '#888');
     const taTest = await fetchREST(rawTicker + '.TA', 'IL');
