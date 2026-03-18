@@ -327,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v5.2</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v5.5</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -474,7 +474,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v5.2</div>
+          <div class="lbl">Stock Portfolio Tracker v5.5</div>
         </div>
       </div>
     </div>
@@ -723,78 +723,83 @@ async function fetchYahoo(ticker) {
 async function fetchMayaFund(fundId) {
   const cleanId = fundId.replace('.TA', '');
 
-  // Strategy 1: mayaapi.tase.co.il - confirmed working, returns AssetValue in ILA (agorot)
-  // Must visit the fund page first to warm up the firewall (browser does this automatically)
-  const mayaUrl = `https://mayaapi.tase.co.il/api/fund/details?fundId=${cleanId}`;
-  const mayaProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(mayaUrl)}`;
+  // bizportal works reliably for both regular funds and ETFs
+  // DailyPoints returns array of daily NAV values
+  const bizDailyUrl = `https://externalapi.bizportal.co.il/mobile/m/DailyPoints?paperId=${cleanId}&delay=1&maxPoints=3&maxDailyRates=3`;
+  const bizLastUrl  = `https://externalapi.bizportal.co.il/mobile/m/GetLastRates?paperId=${cleanId}`;
+  const mayaUrl     = `https://mayaapi.tase.co.il/api/fund/details?fundId=${cleanId}`;
 
-  // Strategy 2: bizportal external API - works for all security types
-  const bizUrl = `https://externalapi.bizportal.co.il/mobile/m/DailyPoints?paperId=${cleanId}&delay=1&maxPoints=2&maxDailyRates=2`;
-  const bizProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(bizUrl)}`;
+  // Helper: try a URL via allorigins proxy
+  async function tryProxy(apiUrl, timeout = 8000) {
+    const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+    try {
+      const r = await fetchWithTimeout(proxy, timeout);
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { return null; }
+  }
 
-  // Strategy 3: bizportal stock data
-  const bizUrl2 = `https://externalapi.bizportal.co.il/mobile/m/GetLastRates?paperId=${cleanId}`;
-  const bizProxy2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(bizUrl2)}`;
-
-  // Try Maya first
-  try {
-    const r = await fetchWithTimeout(mayaProxy, 8000);
-    if (r.ok) {
-      const d = await r.json();
-      // d = { AssetValue: 11606, PrevAssetValue: 11580, ManagerShortName: "...", ... }
-      const nav = d?.AssetValue;
-      const prevNav = d?.PrevAssetValue || nav;
-      const name = d?.ManagerShortName || d?.FundName || null;
-      if (nav && nav > 0) {
+  // --- Strategy 1: bizportal DailyPoints (most reliable) ---
+  const biz1 = await tryProxy(bizDailyUrl);
+  if (biz1) {
+    // Response can be: { DailyPoints: [{Rate, Date}, ...] }
+    // or array directly, or { Points: [...] }
+    let pts = biz1?.DailyPoints || biz1?.Points || biz1?.dailyPoints;
+    if (!pts && Array.isArray(biz1)) pts = biz1;
+    if (pts && pts.length >= 1) {
+      const nav     = parseFloat(pts[0]?.Rate ?? pts[0]?.rate ?? pts[0]?.CloseRate ?? 0);
+      const prevNav = parseFloat(pts[1]?.Rate ?? pts[1]?.rate ?? pts[1]?.CloseRate ?? nav);
+      if (nav > 0) {
         return {
-          price: nav, prev: prevNav || nav,
-          change: nav - (prevNav || nav),
+          price: nav, prev: prevNav,
+          change: nav - prevNav,
           changePct: prevNav > 0 ? ((nav - prevNav) / prevNav * 100) : 0,
-          currency: 'ILA', name, isMutualFund: true
+          currency: 'ILA', name: biz1?.Name || null, isMutualFund: true
         };
       }
     }
-  } catch(e) {}
-
-  // Try bizportal DailyPoints
-  try {
-    const r = await fetchWithTimeout(bizProxy, 8000);
-    if (r.ok) {
-      const d = await r.json();
-      // Returns array of { Rate, Date } sorted desc
-      const pts = d?.DailyPoints || d?.dailyPoints || (Array.isArray(d) ? d : null);
-      if (pts && pts.length >= 1) {
-        const nav = pts[0]?.Rate || pts[0]?.rate;
-        const prevNav = pts[1]?.Rate || pts[1]?.rate || nav;
-        if (nav && nav > 0) {
-          return {
-            price: nav, prev: prevNav || nav,
-            change: nav - (prevNav || nav),
-            changePct: prevNav > 0 ? ((nav - prevNav) / prevNav * 100) : 0,
-            currency: 'ILA', name: null, isMutualFund: true
-          };
-        }
-      }
+    // bizportal sometimes returns flat object with LastRate
+    const nav = parseFloat(biz1?.LastRate ?? biz1?.Rate ?? 0);
+    if (nav > 0) {
+      const prevNav = parseFloat(biz1?.PrevRate ?? biz1?.prevRate ?? nav);
+      return {
+        price: nav, prev: prevNav,
+        change: nav - prevNav,
+        changePct: prevNav > 0 ? ((nav - prevNav) / prevNav * 100) : 0,
+        currency: 'ILA', name: biz1?.Name || null, isMutualFund: true
+      };
     }
-  } catch(e) {}
+  }
 
-  // Try bizportal GetLastRates
-  try {
-    const r = await fetchWithTimeout(bizProxy2, 8000);
-    if (r.ok) {
-      const d = await r.json();
-      const nav = d?.LastRate || d?.Rate || d?.lastRate;
-      const prevNav = d?.PrevRate || d?.prevRate || nav;
-      if (nav && nav > 0) {
-        return {
-          price: nav, prev: prevNav || nav,
-          change: nav - (prevNav || nav),
-          changePct: prevNav > 0 ? ((nav - prevNav) / prevNav * 100) : 0,
-          currency: 'ILA', name: null, isMutualFund: true
-        };
-      }
+  // --- Strategy 2: bizportal GetLastRates ---
+  const biz2 = await tryProxy(bizLastUrl);
+  if (biz2) {
+    const nav     = parseFloat(biz2?.LastRate ?? biz2?.Rate ?? biz2?.lastRate ?? 0);
+    const prevNav = parseFloat(biz2?.PrevRate ?? biz2?.prevRate ?? nav);
+    if (nav > 0) {
+      return {
+        price: nav, prev: prevNav,
+        change: nav - prevNav,
+        changePct: prevNav > 0 ? ((nav - prevNav) / prevNav * 100) : 0,
+        currency: 'ILA', name: biz2?.Name || null, isMutualFund: true
+      };
     }
-  } catch(e) {}
+  }
+
+  // --- Strategy 3: mayaapi (works for some funds, blocked for others) ---
+  const maya = await tryProxy(mayaUrl);
+  if (maya?.AssetValue > 0) {
+    const nav     = maya.AssetValue;
+    const prevNav = maya.PrevAssetValue || nav;
+    return {
+      price: nav, prev: prevNav,
+      change: nav - prevNav,
+      changePct: prevNav > 0 ? ((nav - prevNav) / prevNav * 100) : 0,
+      currency: 'ILA',
+      name: maya.ManagerShortName || maya.FundName || null,
+      isMutualFund: true
+    };
+  }
 
   return null;
 }
