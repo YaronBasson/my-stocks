@@ -327,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v5.1</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v5.2</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -474,7 +474,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v5.1</div>
+          <div class="lbl">Stock Portfolio Tracker v5.2</div>
         </div>
       </div>
     </div>
@@ -722,51 +722,80 @@ async function fetchYahoo(ticker) {
 
 async function fetchMayaFund(fundId) {
   const cleanId = fundId.replace('.TA', '');
-  // Try multiple TASE API endpoints (no auth required for basic data)
-  const endpoints = [
-    // api.tase.co.il - the official TASE API used by pymaya
-    `https://api.tase.co.il/api/fund/mutual/live/${cleanId}`,
-    `https://api.tase.co.il/api/security/trading/history/${cleanId}?period=daily&from=&to=`,
-    // Fallback: try Yahoo with .TA suffix (mutual funds also listed there)
-  ];
-  for (const apiUrl of endpoints) {
-    try {
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
-      const r = await fetchWithTimeout(proxyUrl, 8000);
-      if (!r.ok) continue;
+
+  // Strategy 1: mayaapi.tase.co.il - confirmed working, returns AssetValue in ILA (agorot)
+  // Must visit the fund page first to warm up the firewall (browser does this automatically)
+  const mayaUrl = `https://mayaapi.tase.co.il/api/fund/details?fundId=${cleanId}`;
+  const mayaProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(mayaUrl)}`;
+
+  // Strategy 2: bizportal external API - works for all security types
+  const bizUrl = `https://externalapi.bizportal.co.il/mobile/m/DailyPoints?paperId=${cleanId}&delay=1&maxPoints=2&maxDailyRates=2`;
+  const bizProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(bizUrl)}`;
+
+  // Strategy 3: bizportal stock data
+  const bizUrl2 = `https://externalapi.bizportal.co.il/mobile/m/GetLastRates?paperId=${cleanId}`;
+  const bizProxy2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(bizUrl2)}`;
+
+  // Try Maya first
+  try {
+    const r = await fetchWithTimeout(mayaProxy, 8000);
+    if (r.ok) {
       const d = await r.json();
-      // Handle various response formats
-      let nav = null, prevNav = null, name = null;
-      if (d && typeof d === 'object') {
-        // Format: { Rate, PrevRate, Name } or { AssetValue, PrevAssetValue }
-        nav = d.Rate || d.AssetValue || d.nav || d.price || d.NAV;
-        prevNav = d.PrevRate || d.PrevAssetValue || d.prevNav || d.prevPrice || nav;
-        name = d.Name || d.FundName || d.SecurityName || d.name;
-        // Some APIs return array
-        if (Array.isArray(d) && d.length > 0) {
-          nav = d[0].Rate || d[0].CloseRate || d[0].Price;
-          prevNav = d[1]?.Rate || d[1]?.CloseRate || nav;
-        }
-      }
+      // d = { AssetValue: 11606, PrevAssetValue: 11580, ManagerShortName: "...", ... }
+      const nav = d?.AssetValue;
+      const prevNav = d?.PrevAssetValue || nav;
+      const name = d?.ManagerShortName || d?.FundName || null;
       if (nav && nav > 0) {
-        // TASE fund prices are in ILA (agorot) — divide by 100 for ILS display
         return {
-          price: nav,
-          prev: prevNav || nav,
+          price: nav, prev: prevNav || nav,
           change: nav - (prevNav || nav),
           changePct: prevNav > 0 ? ((nav - prevNav) / prevNav * 100) : 0,
-          currency: 'ILA',
-          name: name,
-          isMutualFund: true
+          currency: 'ILA', name, isMutualFund: true
         };
       }
-    } catch(e) { continue; }
-  }
-  // Final fallback: try Yahoo Finance (some funds appear there)
-  const yahooResult = await fetchYahoo(fundId);
-  if (yahooResult) {
-    return { ...yahooResult, isMutualFund: true };
-  }
+    }
+  } catch(e) {}
+
+  // Try bizportal DailyPoints
+  try {
+    const r = await fetchWithTimeout(bizProxy, 8000);
+    if (r.ok) {
+      const d = await r.json();
+      // Returns array of { Rate, Date } sorted desc
+      const pts = d?.DailyPoints || d?.dailyPoints || (Array.isArray(d) ? d : null);
+      if (pts && pts.length >= 1) {
+        const nav = pts[0]?.Rate || pts[0]?.rate;
+        const prevNav = pts[1]?.Rate || pts[1]?.rate || nav;
+        if (nav && nav > 0) {
+          return {
+            price: nav, prev: prevNav || nav,
+            change: nav - (prevNav || nav),
+            changePct: prevNav > 0 ? ((nav - prevNav) / prevNav * 100) : 0,
+            currency: 'ILA', name: null, isMutualFund: true
+          };
+        }
+      }
+    }
+  } catch(e) {}
+
+  // Try bizportal GetLastRates
+  try {
+    const r = await fetchWithTimeout(bizProxy2, 8000);
+    if (r.ok) {
+      const d = await r.json();
+      const nav = d?.LastRate || d?.Rate || d?.lastRate;
+      const prevNav = d?.PrevRate || d?.prevRate || nav;
+      if (nav && nav > 0) {
+        return {
+          price: nav, prev: prevNav || nav,
+          change: nav - (prevNav || nav),
+          changePct: prevNav > 0 ? ((nav - prevNav) / prevNav * 100) : 0,
+          currency: 'ILA', name: null, isMutualFund: true
+        };
+      }
+    }
+  } catch(e) {}
+
   return null;
 }
 
