@@ -327,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v3.8</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v3.9</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -473,7 +473,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v3.8</div>
+          <div class="lbl">Stock Portfolio Tracker v3.9</div>
         </div>
       </div>
     </div>
@@ -504,21 +504,21 @@ const DEFAULT_API_KEY = '';
 let state = {
   apiKey: DEFAULT_API_KEY,
   portfolios: [
-    { id:1, name:'\u05EA\u05D9\u05E7 1 \u2014 \u05D9\u05E9\u05E8\u05D0\u05DC\u05D9', color:'#00d4a0', expanded:true, stocks:[
-      { ticker:'TEVA.TA', name:'\u05D8\u05D1\u05E2', qty:100, cost:42.50, market:'IL' },
-      { ticker:'NICE.TA', name:'\u05E0\u05D9\u05D9\u05E1', qty:20, cost:1850, market:'IL' },
-      { ticker:'CHKP.TA', name:'\u05E6\u05F3\u05E7 \u05E4\u05D5\u05D9\u05E0\u05D8', qty:15, cost:1620, market:'IL' }
+    { id:1, name:'תיק 1 — ישראלי', color:'#00d4a0', expanded:true, stocks:[
+      { ticker:'TEVA.TA', name:'טבע', qty:100, cost:42.50, market:'IL' },
+      { ticker:'NICE.TA', name:'נייס', qty:20, cost:1850, market:'IL' },
+      { ticker:'CHKP.TA', name:'צ׳ק פוינט', qty:15, cost:1620, market:'IL' }
     ]},
-    { id:2, name:'\u05EA\u05D9\u05E7 2 \u2014 \u05D0\u05E8\u05D4\u05F4\u05D1', color:'#4488ff', expanded:true, stocks:[
+    { id:2, name:'תיק 2 — ארה״ב', color:'#4488ff', expanded:true, stocks:[
       { ticker:'AAPL', name:'Apple', qty:30, cost:175, market:'US' },
       { ticker:'MSFT', name:'Microsoft', qty:25, cost:380, market:'US' },
       { ticker:'NVDA', name:'Nvidia', qty:10, cost:480, market:'US' }
     ]},
-    { id:3, name:'\u05EA\u05D9\u05E7 3 \u2014 \u05DC\u05D5\u05E0\u05D3\u05D5\u05DF', color:'#f0b429', expanded:true, stocks:[
+    { id:3, name:'תיק 3 — לונדון', color:'#f0b429', expanded:true, stocks:[
       { ticker:'SHEL.L', name:'Shell', qty:200, cost:2650, market:'UK' },
       { ticker:'BP.L', name:'BP', qty:300, cost:480, market:'UK' }
     ]},
-    { id:4, name:'\u05EA\u05D9\u05E7 4 \u2014 \u05DE\u05E2\u05D5\u05E8\u05D1', color:'#ff5566', expanded:true, stocks:[
+    { id:4, name:'תיק 4 — מעורב', color:'#ff5566', expanded:true, stocks:[
       { ticker:'GOOGL', name:'Alphabet', qty:15, cost:140, market:'US' },
       { ticker:'AMZN', name:'Amazon', qty:20, cost:178, market:'US' }
     ]}
@@ -537,7 +537,7 @@ let sortBy = 'none'; // 'none' | 'name' | 'value' | 'gain'
 let wsReconnectTimer = null;
 let deferredInstall = null;
 let alertFormOpen = false;
-let formOpen = false; // true when add-stock form is active \u2014 blocks auto re-render
+let formOpen = false; // true when add-stock form is active — blocks auto re-render
 
 function loadState() {
   try {
@@ -580,7 +580,7 @@ function renderRateBar() { /* overridden below after trading-hours logic */ }
 function connectWS() {
   if (!state.apiKey) {
     setLiveDot(false);
-    document.getElementById('live-dot').title = '\u05D7\u05E1\u05E8 API key \u2014 \u05D4\u05D2\u05D3\u05E8\u05D5\u05EA';
+    document.getElementById('live-dot').title = 'חסר API key — הגדרות';
     return;
   }
   if (ws) { ws.close(); ws = null; }
@@ -625,7 +625,7 @@ function connectWS() {
 function setLiveDot(on) {
   const d = document.getElementById('live-dot');
   d.className = 'live-dot' + (on ? '' : ' off');
-  d.title = on ? '\u05DE\u05D7\u05D5\u05D1\u05E8 \u2014 \u05E0\u05EA\u05D5\u05E0\u05D9\u05DD \u05D7\u05D9\u05D9\u05DD' : '\u05DC\u05D0 \u05DE\u05D7\u05D5\u05D1\u05E8';
+  d.title = on ? 'מחובר — נתונים חיים' : 'לא מחובר';
 }
 
 // REST fallback for non-US or missing prices
@@ -639,7 +639,7 @@ async function fetchWithTimeout(url, ms = 8000) {
   } catch(e) { clearTimeout(timer); throw e; }
 }
 
-// Finnhub REST \u2014 works for US stocks with API key, no CORS issues
+// Finnhub REST — works for US stocks with API key, no CORS issues
 async function fetchFinnhubREST(ticker) {
   if (!state.apiKey) return null;
   try {
@@ -754,14 +754,14 @@ function costToILS(costPerShare, market, costCurrency) {
 }
 
 function fmtILS(v) {
-  return '\u20AA' + Math.round(v).toLocaleString('he-IL');
+  return '₪' + Math.round(v).toLocaleString('he-IL');
 }
 function fmtUSD(v) {
   return '$' + Math.round(v).toLocaleString('en-US');
 }
 function sign(v) { return v >= 0 ? '+' : ''; }
 function cls(v) { return v >= 0 ? 'green' : 'red'; }
-function arrow(v) { return v >= 0 ? '\u25B2' : '\u25BC'; }
+function arrow(v) { return v >= 0 ? '▲' : '▼'; }
 
 // Render debounce
 let renderTimer = null;
@@ -842,9 +842,9 @@ function renderPortfolioView() {
     document.getElementById('port-view').innerHTML = `
       <div class="port-card" style="padding:32px;text-align:center;">
         <div style="font-size:32px;margin-bottom:12px;"></div>
-        <div style="font-size:15px;font-weight:500;margin-bottom:8px;">\u05D0\u05D9\u05DF \u05EA\u05D9\u05E7\u05D9\u05DD \u05E2\u05D3\u05D9\u05D9\u05DF</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:20px;">\u05DC\u05D7\u05E5 \u05E2\u05DC \u05D4\u05D2\u05D3\u05E8\u05D5\u05EA \u2699 \u05DC\u05D4\u05D5\u05E1\u05E4\u05EA \u05EA\u05D9\u05E7 \u05D7\u05D3\u05E9</div>
-        <button class="btn-primary" onclick="switchTab('settings')">\u2699 \u05D4\u05D2\u05D3\u05E8\u05D5\u05EA</button>
+        <div style="font-size:15px;font-weight:500;margin-bottom:8px;">אין תיקים עדיין</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:20px;">לחץ על הגדרות ⚙ להוספת תיק חדש</div>
+        <button class="btn-primary" onclick="switchTab('settings')">⚙ הגדרות</button>
       </div>`;
     return;
   }
@@ -855,34 +855,34 @@ function renderPortfolioView() {
   if (state.editMode) {
     addFormHTML = `<div class="add-form">
       <div class="row">
-        <input type="text" id="ns-ticker" placeholder="\u05E1\u05D9\u05DE\u05D5\u05DC: AAPL / TEVA.TA / BP.L" style="direction:ltr;text-transform:uppercase;flex:2;" onfocus="formOpen=true" onblur="formOpen=true">
+        <input type="text" id="ns-ticker" placeholder="סימול: AAPL / TEVA.TA / BP.L" style="direction:ltr;text-transform:uppercase;flex:2;" onfocus="formOpen=true" onblur="formOpen=true">
         <select id="ns-market" onfocus="formOpen=true" style="flex:1;">
-          <option value="US">US \u05D0\u05E8\u05D4"\u05D1</option>
-          <option value="IL">IL \u05D9\u05E9\u05E8\u05D0\u05DC</option>
-          <option value="UK">UK \u05DC\u05D5\u05E0\u05D3\u05D5\u05DF</option>
+          <option value="US">US ארה"ב</option>
+          <option value="IL">IL ישראל</option>
+          <option value="UK">UK לונדון</option>
         </select>
       </div>
-      <input type="text" id="ns-name" placeholder="\u05E9\u05DD \u05D4\u05D7\u05D1\u05E8\u05D4 (\u05D0\u05D5\u05D8\u05D5\u05DE\u05D8\u05D9 \u05D0\u05DD \u05E8\u05D9\u05E7)" onfocus="formOpen=true" onblur="formOpen=true">
+      <input type="text" id="ns-name" placeholder="שם החברה (אוטומטי אם ריק)" onfocus="formOpen=true" onblur="formOpen=true">
       <div class="row">
-        <input type="number" id="ns-qty" placeholder="\u05DB\u05DE\u05D5\u05EA" style="flex:1;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
-        <input type="number" id="ns-cost" placeholder="\u05E2\u05DC\u05D5\u05EA (IL=\u05D0\u05D2\u05D5\u05E8\u05D5\u05EA, US=$, UK=GBp)" style="flex:2;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
+        <input type="number" id="ns-qty" placeholder="כמות" style="flex:1;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
+        <input type="number" id="ns-cost" placeholder="עלות (IL=אגורות, US=$, UK=GBp)" style="flex:2;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
         <select id="ns-cost-currency" onfocus="formOpen=true" style="flex:1;">
-          <option value="">\u05D0\u05D5\u05D8\u05D5</option>
+          <option value="">אוטו</option>
           <option value="USD">$</option>
-          <option value="ILS">\u20AA</option>
+          <option value="ILS">₪</option>
           <option value="GBp">GBp</option>
-          <option value="GBP">\u00A3</option>
+          <option value="GBP">£</option>
         </select>
       </div>
-      <button class="btn-primary" onclick="addStockToPort(${state.currentPort})">+ \u05D4\u05D5\u05E1\u05E3 \u05DE\u05E0\u05D9\u05D9\u05D4</button>
+      <button class="btn-primary" onclick="addStockToPort(${state.currentPort})">+ הוסף מנייה</button>
     </div>`;
   }
 
   let stockCardsHTML = '';
   if (p.stocks.length === 0) {
     stockCardsHTML = `<div style="padding:24px;text-align:center;color:var(--text3);">
-      <div style="margin-bottom:10px;">\u05D0\u05D9\u05DF \u05DE\u05E0\u05D9\u05D5\u05EA \u05D1\u05EA\u05D9\u05E7 \u05D6\u05D4</div>
-      <button class="btn-sm" onclick="state.editMode=true;renderPortfolioView();">+ \u05D4\u05D5\u05E1\u05E3 \u05DE\u05E0\u05D9\u05D9\u05D4</button>
+      <div style="margin-bottom:10px;">אין מניות בתיק זה</div>
+      <button class="btn-sm" onclick="state.editMode=true;renderPortfolioView();">+ הוסף מנייה</button>
     </div>`;
   } else {
     // Sort stocks
@@ -900,9 +900,9 @@ function renderPortfolioView() {
     }
     stockCardsHTML = sortedStocks.map(({ s, si }) => {
       const hasPrice = s._price != null && s._price > 0;
-      const priceStr = hasPrice ? s._price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '\u2014';
+      const priceStr = hasPrice ? s._price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
       const priceChangeRaw = hasPrice && s._prev ? (s._price - s._prev) : 0;
-      const priceCurSymbol = s._apiCurrency === 'GBp' ? 'p' : s._apiCurrency === 'GBP' ? '\u00A3' : s._apiCurrency === 'ILS' ? '\u20AA' : '$';
+      const priceCurSymbol = s._apiCurrency === 'GBp' ? 'p' : s._apiCurrency === 'GBP' ? '£' : s._apiCurrency === 'ILS' ? '₪' : '$';
 
       const valILS = s._valILS || s._costILS || 0;
       const valUSD = valILS / state.fx.usdils;
@@ -917,12 +917,12 @@ function renderPortfolioView() {
 
       const dayColor = dayILS >= 0 ? 'var(--green)' : 'var(--red)';
       const gainColor = gainILS >= 0 ? 'var(--green)' : 'var(--red)';
-      const costCurSymbol = s.costCurrency === 'ILS' ? '\u20AA' : s.costCurrency === 'GBp' ? 'p' : s.costCurrency === 'GBP' ? '\u00A3' : '$';
+      const costCurSymbol = s.costCurrency === 'ILS' ? '₪' : s.costCurrency === 'GBp' ? 'p' : s.costCurrency === 'GBP' ? '£' : '$';
 
       const editBtns = state.editMode
         ? `<div style="display:flex;gap:3px;margin-top:4px;">
-            <button onclick="editStock(${state.currentPort},${si})" style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);border-radius:4px;padding:2px 0;font-size:10px;cursor:pointer;color:var(--text2);">\u05E2\u05E8\u05D5\u05DA</button>
-            <button onclick="removeStock(${state.currentPort},${si})" style="flex:1;background:none;border:0.5px solid var(--red);border-radius:4px;padding:2px 0;font-size:10px;cursor:pointer;color:var(--red);">\u05DE\u05D7\u05E7</button>
+            <button onclick="editStock(${state.currentPort},${si})" style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);border-radius:4px;padding:2px 0;font-size:10px;cursor:pointer;color:var(--text2);">ערוך</button>
+            <button onclick="removeStock(${state.currentPort},${si})" style="flex:1;background:none;border:0.5px solid var(--red);border-radius:4px;padding:2px 0;font-size:10px;cursor:pointer;color:var(--red);">מחק</button>
           </div>`
         : '';
 
@@ -937,20 +937,20 @@ function renderPortfolioView() {
               ${hasPrice ? `<span style="font-family:var(--mono);font-size:10px;color:${priceChangeRaw >= 0 ? 'var(--green)' : 'var(--red)'};" dir="ltr">${priceChangeRaw >= 0 ? '+' : ''}${priceChangeRaw.toFixed(2)}</span>` : ''}
             </div>
             <div style="font-size:10px;color:var(--text3);margin-top:1px;">${s.name}</div>
-            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);">${s.qty.toLocaleString()} \u00D7 ${costCurSymbol}${s.cost > 0 ? s.cost.toFixed(2) : 'RSU'}</div>
+            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);">${s.qty.toLocaleString()} × ${costCurSymbol}${s.cost > 0 ? s.cost.toFixed(2) : 'RSU'}</div>
             ${editBtns}
           </div>
 
           <!-- COL 2: purchase cost -->
           <div style="text-align:left;">
-            <div style="font-size:9px;color:var(--text3);">\u05E2\u05DC\u05D5\u05EA</div>
+            <div style="font-size:9px;color:var(--text3);">עלות</div>
             <div style="font-family:var(--mono);font-size:11px;font-weight:500;">${fmtILS(costILS)}</div>
             <div style="font-family:var(--mono);font-size:10px;color:var(--text2);">${fmtUSD(costUSD)}</div>
           </div>
 
           <!-- COL 3: daily change -->
           <div style="text-align:left;">
-            <div style="font-size:9px;color:var(--text3);">\u05D9\u05D5\u05DE\u05D9</div>
+            <div style="font-size:9px;color:var(--text3);">יומי</div>
             <div style="font-family:var(--mono);font-size:11px;font-weight:500;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${fmtILS(dayILS)}</div>
             <div style="font-family:var(--mono);font-size:10px;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${fmtUSD(Math.abs(dayUSD))}</div>
             <div style="font-family:var(--mono);font-size:10px;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${dayPct.toFixed(2)}%</div>
@@ -958,7 +958,7 @@ function renderPortfolioView() {
 
           <!-- COL 4: total value (BIG) + gain -->
           <div style="text-align:left;">
-            <div style="font-size:9px;color:var(--text3);">\u05E9\u05D5\u05D5\u05D9</div>
+            <div style="font-size:9px;color:var(--text3);">שווי</div>
             <div style="font-family:var(--mono);font-size:13px;font-weight:700;">${fmtILS(valILS)}</div>
             <div style="font-family:var(--mono);font-size:10px;color:var(--text2);">${fmtUSD(valUSD)}</div>
             <div style="font-family:var(--mono);font-size:10px;color:${gainColor};">${gainILS >= 0 ? '+' : ''}${fmtILS(gainILS)} (${gainILS >= 0 ? '+' : ''}${gainPct.toFixed(1)}%)</div>
@@ -971,8 +971,8 @@ function renderPortfolioView() {
   }
 
   const renameBtn = state.editMode
-    ? `<button class="btn-sm" onclick="renamePort(${state.currentPort})" style="margin-right:4px;">\u270E \u05E9\u05E0\u05D4 \u05E9\u05DD</button>
-       <button class="btn-sm" style="color:var(--red);border-color:var(--red);" onclick="deletePort(${state.currentPort})">\u05DE\u05D7\u05E7 \u05EA\u05D9\u05E7</button>`
+    ? `<button class="btn-sm" onclick="renamePort(${state.currentPort})" style="margin-right:4px;">✎ שנה שם</button>
+       <button class="btn-sm" style="color:var(--red);border-color:var(--red);" onclick="deletePort(${state.currentPort})">מחק תיק</button>`
     : '';
 
   document.getElementById('port-view').innerHTML = `
@@ -983,7 +983,7 @@ function renderPortfolioView() {
             <div class="port-color-bar" style="background:${p.color}"></div>
             <div>
               <div class="port-name">${p.name}</div>
-              <div class="port-count">${p.stocks.length} \u05DE\u05E0\u05D9\u05D5\u05EA</div>
+              <div class="port-count">${p.stocks.length} מניות</div>
             </div>
           </div>
         </div>
@@ -991,7 +991,7 @@ function renderPortfolioView() {
           <div class="port-total">${fmtILS(c.totalILS)}</div>
           <div style="font-family:var(--mono);font-size:11px;color:var(--text2);">${fmtUSD(c.totalILS/state.fx.usdils)}</div>
           <div class="port-gain ${cls(c.gainILS)}">${sign(c.gainILS)}${fmtILS(c.gainILS)} <span style="font-size:10px;">(${gainPct.toFixed(1)}%)</span></div>
-          <div class="port-day ${cls(c.dayILS)}">\u05D9\u05D5\u05DE\u05D9: ${sign(c.dayILS)}${fmtILS(c.dayILS)}</div>
+          <div class="port-day ${cls(c.dayILS)}">יומי: ${sign(c.dayILS)}${fmtILS(c.dayILS)}</div>
         </div>
       </div>
       ${state.editMode ? `<div class="port-actions">${renameBtn}</div>` : ''}
@@ -1008,21 +1008,21 @@ function renderSummary() {
     const c = computePortfolio(p);
     const pct = c.costILS > 0 ? ((c.gainILS/c.costILS)*100) : 0;
     return `<div class="sum-card" style="border-top-color:${p.color}">
-      <div class="sum-label">\u05EA\u05D9\u05E7</div>
+      <div class="sum-label">תיק</div>
       <div class="sum-name">${p.name}</div>
       <div class="sum-val">${fmtILS(c.totalILS)}</div>
       <div class="sum-sub">${fmtUSD(c.totalILS/state.fx.usdils)}</div>
       <div style="margin-top:8px;">
-        <div class="sum-label">\u05E8\u05D5\u05D5\u05D7 \u05DB\u05D5\u05DC\u05DC</div>
+        <div class="sum-label">רווח כולל</div>
         <div class="sum-val ${cls(c.gainILS)}" style="font-size:14px;">${sign(c.gainILS)}${fmtILS(c.gainILS)}</div>
         <div class="sum-sub ${cls(pct)}">${sign(pct)}${pct.toFixed(1)}%</div>
       </div>
       <div style="margin-top:6px;">
-        <div class="sum-label">\u05D9\u05D5\u05DE\u05D9</div>
+        <div class="sum-label">יומי</div>
         <div class="${cls(c.dayILS)} mono" style="font-size:13px;">${sign(c.dayILS)}${fmtILS(c.dayILS)}</div>
       </div>
       <div style="margin-top:6px;">
-        <div class="sum-label">\u05DE\u05E0\u05D9\u05D5\u05EA</div>
+        <div class="sum-label">מניות</div>
         <div class="mono" style="font-size:13px;">${p.stocks.length}</div>
       </div>
     </div>`;
@@ -1032,23 +1032,23 @@ function renderSummary() {
 function renderAlerts() {
   const el = document.getElementById('alerts-list');
   if (!state.alerts.length) {
-    el.innerHTML = '<div class="no-stocks">\u05D0\u05D9\u05DF \u05D4\u05EA\u05E8\u05D0\u05D5\u05EA \u05E4\u05E2\u05D9\u05DC\u05D5\u05EA</div>';
+    el.innerHTML = '<div class="no-stocks">אין התראות פעילות</div>';
     return;
   }
   el.innerHTML = state.alerts.map((a, i) => {
     const pd = state.prices[a.ticker];
     const cur = pd?.price;
     const status = cur
-      ? `<span style="color:var(--text2);font-size:10px;">\u05DE\u05D7\u05D9\u05E8 \u05E0\u05D5\u05DB\u05D7\u05D9: ${cur.toFixed(2)}</span>`
+      ? `<span style="color:var(--text2);font-size:10px;">מחיר נוכחי: ${cur.toFixed(2)}</span>`
       : '';
     return `<div class="alert-item ${a.triggered?'alert-triggered':''}">
       <div>
         <div class="alert-ticker">${a.ticker}
-          <span class="badge ${a.dir==='above'?'us':'il'}" style="font-size:9px;">${a.dir==='above'?'\u25B2':'\u25BC'} ${a.price}</span>
+          <span class="badge ${a.dir==='above'?'us':'il'}" style="font-size:9px;">${a.dir==='above'?'▲':'▼'} ${a.price}</span>
         </div>
         <div class="alert-detail">${a.note||''} ${status}</div>
       </div>
-      <button class="del-btn" onclick="removeAlert(${i})">\u2715</button>
+      <button class="del-btn" onclick="removeAlert(${i})">✕</button>
     </div>`;
   }).join('');
 }
@@ -1082,7 +1082,7 @@ function setSort(s) {
 function toggleEdit() {
   state.editMode = !state.editMode;
   if (!state.editMode) formOpen = false; // closing edit mode clears form lock
-  document.querySelector('.icon-btn[onclick="toggleEdit()"]').textContent = state.editMode ? '\u2713' : '\u270E';
+  document.querySelector('.icon-btn[onclick="toggleEdit()"]').textContent = state.editMode ? '✓' : '✎';
   renderPortfolioView();
 }
 
@@ -1138,12 +1138,12 @@ async function addStockToPort(pIdx) {
   const selectedMarket = document.getElementById('ns-market')?.value;
   const costCurrency = document.getElementById('ns-cost-currency')?.value || null;
   if (!rawTicker || !qty || isNaN(cost)) {
-    showNotif('\u05D9\u05E9 \u05DC\u05DE\u05DC\u05D0 \u05E1\u05D9\u05DE\u05D5\u05DC, \u05DB\u05DE\u05D5\u05EA \u05D5\u05E2\u05DC\u05D5\u05EA (\u05E2\u05DC\u05D5\u05EA 0 \u05EA\u05E7\u05D9\u05E0\u05D4 \u05DC-RSU)');
+    showNotif('יש למלא סימול, כמות ועלות (עלות 0 תקינה ל-RSU)');
     return;
   }
 
   const btn = document.querySelector(`button[onclick="addStockToPort(${pIdx})"]`);
-  if (btn) btn.textContent = '\u05DE\u05D6\u05D4\u05D4...';
+  if (btn) btn.textContent = 'מזהה...';
 
   let ticker = rawTicker;
   let market = selectedMarket;
@@ -1155,7 +1155,7 @@ async function addStockToPort(pIdx) {
     market = 'UK';
   } else if (!rawTicker.includes('.')) {
     // No suffix -- try TASE first by appending .TA and checking Yahoo
-    if (btn) btn.textContent = '\u05D1\u05D5\u05D3\u05E7...';
+    if (btn) btn.textContent = 'בודק...';
     const taTest = await fetchREST(rawTicker + '.TA', 'IL');
     if (taTest && taTest.price && taTest.price > 0) {
       // Found on TASE
@@ -1171,7 +1171,7 @@ async function addStockToPort(pIdx) {
   let autoName = nameInput;
   let autoCostCurrency = costCurrency || null;
 
-  if (btn) btn.textContent = '\u05DE\u05D6\u05D4\u05D4...';
+  if (btn) btn.textContent = 'מזהה...';
   // Fetch price to get API currency
   const priceData = await fetchREST(ticker, market);
   if (priceData) {
@@ -1183,7 +1183,7 @@ async function addStockToPort(pIdx) {
   }
 
   if (!autoName) {
-    if (btn) btn.textContent = '\u05DE\u05D7\u05E4\u05E9 \u05E9\u05DD...';
+    if (btn) btn.textContent = 'מחפש שם...';
     autoName = await autoDetectName(ticker, market);
   }
 
@@ -1191,9 +1191,9 @@ async function addStockToPort(pIdx) {
   saveState();
   formOpen = false;
   fetchAllPrices().then(() => renderAll());
-  const curLabel = autoCostCurrency === 'USD' ? '($)' : autoCostCurrency === 'ILS' ? '(\u20AA)' : autoCostCurrency === 'GBp' ? '(GBp)' : market === 'IL' ? '(\u05D0\u05D2)' : market === 'US' ? '($)' : '(GBp)';
-  showNotif(`${ticker} \u05E0\u05D5\u05E1\u05E3 ${curLabel} \u2013 ${autoName || ticker} \u2713`);
-  if (btn) btn.textContent = '+ \u05D4\u05D5\u05E1\u05E3 \u05DE\u05E0\u05D9\u05D9\u05D4';
+  const curLabel = autoCostCurrency === 'USD' ? '($)' : autoCostCurrency === 'ILS' ? '(₪)' : autoCostCurrency === 'GBp' ? '(GBp)' : market === 'IL' ? '(אג)' : market === 'US' ? '($)' : '(GBp)';
+  showNotif(`${ticker} נוסף ${curLabel} – ${autoName || ticker} ✓`);
+  if (btn) btn.textContent = '+ הוסף מנייה';
   if (market === 'US' && ws && ws.readyState === 1) {
     ws.send(JSON.stringify({ type:'subscribe', symbol: ticker }));
   }
@@ -1215,9 +1215,9 @@ function editStock(pIdx, sIdx) {
   formOpen = true;
   card.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:6px;padding:2px 0;">
-      <div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:2px;">\u05E2\u05E8\u05D9\u05DB\u05EA ${s.ticker}</div>
+      <div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:2px;">עריכת ${s.ticker}</div>
       <div style="display:flex;gap:6px;">
-        <input id="edit-name-${sIdx}" type="text" value="${s.name}" placeholder="\u05E9\u05DD \u05D7\u05D1\u05E8\u05D4"
+        <input id="edit-name-${sIdx}" type="text" value="${s.name}" placeholder="שם חברה"
           style="flex:2;background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--text);"
           onfocus="formOpen=true" onblur="formOpen=true">
         <select id="edit-market-${sIdx}" onfocus="formOpen=true"
@@ -1228,18 +1228,18 @@ function editStock(pIdx, sIdx) {
         </select>
       </div>
       <div style="display:flex;gap:6px;">
-        <input id="edit-qty-${sIdx}" type="number" value="${s.qty}" placeholder="\u05DB\u05DE\u05D5\u05EA"
+        <input id="edit-qty-${sIdx}" type="number" value="${s.qty}" placeholder="כמות"
           style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--text);direction:ltr;"
           onfocus="formOpen=true" onblur="formOpen=true">
-        <input id="edit-cost-${sIdx}" type="number" value="${s.cost}" placeholder="\u05E2\u05DC\u05D5\u05EA \u05DC\u05DE\u05E0\u05D9\u05D9\u05D4"
+        <input id="edit-cost-${sIdx}" type="number" value="${s.cost}" placeholder="עלות למנייה"
           style="flex:2;background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--text);direction:ltr;"
           onfocus="formOpen=true" onblur="formOpen=true">
       </div>
       <div style="display:flex;gap:6px;">
         <button onclick="saveEditStock(${pIdx},${sIdx})"
-          style="flex:2;background:var(--green);color:#fff;border:none;border-radius:6px;padding:7px;font-size:12px;font-weight:600;cursor:pointer;">\u05E9\u05DE\u05D5\u05E8</button>
+          style="flex:2;background:var(--green);color:#fff;border:none;border-radius:6px;padding:7px;font-size:12px;font-weight:600;cursor:pointer;">שמור</button>
         <button onclick="cancelEditStock()"
-          style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:7px;font-size:12px;cursor:pointer;color:var(--text2);">\u05D1\u05D8\u05DC</button>
+          style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:7px;font-size:12px;cursor:pointer;color:var(--text2);">בטל</button>
       </div>
     </div>`;
 }
@@ -1250,7 +1250,7 @@ function saveEditStock(pIdx, sIdx) {
   const qty = parseFloat(document.getElementById(`edit-qty-${sIdx}`)?.value);
   const cost = parseFloat(document.getElementById(`edit-cost-${sIdx}`)?.value);
   const market = document.getElementById(`edit-market-${sIdx}`)?.value;
-  if (!qty || isNaN(cost)) { showNotif('\u05E9\u05D2\u05D9\u05D0\u05D4 \u05D1\u05E7\u05DC\u05D8'); return; }
+  if (!qty || isNaN(cost)) { showNotif('שגיאה בקלט'); return; }
   s.name = name || s.name;
   s.qty = qty;
   s.cost = cost;
@@ -1261,7 +1261,7 @@ function saveEditStock(pIdx, sIdx) {
   // Clear cached price to force re-fetch with possibly new market
   if (state.prices[s.ticker]) delete state.prices[s.ticker].price;
   fetchAllPrices().then(() => renderAll());
-  showNotif(`${s.ticker} \u05E2\u05D5\u05D3\u05DB\u05DF \u2713`);
+  showNotif(`${s.ticker} עודכן ✓`);
 }
 
 function cancelEditStock() {
@@ -1272,23 +1272,23 @@ function cancelEditStock() {
 function addPortfolio() {
   const name = document.getElementById('new-port-name').value.trim();
   const color = document.getElementById('new-port-color').value;
-  if (!name) { showNotif('\u05D4\u05D6\u05DF \u05E9\u05DD \u05DC\u05EA\u05D9\u05E7'); return; }
+  if (!name) { showNotif('הזן שם לתיק'); return; }
   state.portfolios.push({ id: Date.now(), name, color, expanded: true, stocks: [] });
   state.currentPort = state.portfolios.length - 1;
   saveState();
   document.getElementById('new-port-name').value = '';
   switchTab('portfolios');
   renderAll();
-  showNotif(`\u05EA\u05D9\u05E7 "${name}" \u05E0\u05D5\u05E1\u05E3!`);
+  showNotif(`תיק "${name}" נוסף!`);
 }
 
 function renamePort(pIdx) {
-  const n = prompt('\u05E9\u05DD \u05D7\u05D3\u05E9:', state.portfolios[pIdx].name);
+  const n = prompt('שם חדש:', state.portfolios[pIdx].name);
   if (n) { state.portfolios[pIdx].name = n; saveState(); renderPortfolioView(); }
 }
 
 function deletePort(pIdx) {
-  if (!confirm(`\u05DC\u05DE\u05D7\u05D5\u05E7 \u05D0\u05EA "${state.portfolios[pIdx].name}"?`)) return;
+  if (!confirm(`למחוק את "${state.portfolios[pIdx].name}"?`)) return;
   state.portfolios.splice(pIdx, 1);
   if (state.currentPort >= state.portfolios.length) state.currentPort = Math.max(0, state.portfolios.length - 1);
   saveState();
@@ -1305,7 +1305,7 @@ function addAlert() {
   const dir = document.getElementById('al-dir').value;
   const price = parseFloat(document.getElementById('al-price').value);
   const note = document.getElementById('al-note').value.trim();
-  if (!ticker || !price) { showNotif('\u05D9\u05E9 \u05DC\u05DE\u05DC\u05D0 \u05E1\u05D9\u05DE\u05D5\u05DC \u05D5\u05DE\u05D7\u05D9\u05E8 \u05D9\u05E2\u05D3'); return; }
+  if (!ticker || !price) { showNotif('יש למלא סימול ומחיר יעד'); return; }
   state.alerts.push({ ticker, dir, price, note, triggered: false });
   saveState();
   renderAlerts();
@@ -1325,10 +1325,10 @@ function checkAlerts() {
     if (triggered && !a.triggered) {
       a.triggered = true;
       saveState();
-      const msg = `${a.ticker}: \u05DE\u05D7\u05D9\u05E8 ${pd.price.toFixed(2)} ${a.dir==='above'?'\u05E2\u05DC\u05D4 \u05DE\u05E2\u05DC':'\u05D9\u05E8\u05D3 \u05DE\u05EA\u05D7\u05EA \u05DC-'}${a.price}`;
+      const msg = `${a.ticker}: מחיר ${pd.price.toFixed(2)} ${a.dir==='above'?'עלה מעל':'ירד מתחת ל-'}${a.price}`;
       showNotif(' ' + msg);
       if (Notification.permission === 'granted') {
-        new Notification('\u05D4\u05EA\u05E8\u05D0\u05EA \u05DE\u05E0\u05D9\u05D9\u05D4', { body: msg });
+        new Notification('התראת מנייה', { body: msg });
       }
       renderAlerts();
     }
@@ -1339,7 +1339,7 @@ function saveApiKey() {
   const key = document.getElementById('api-key-input').value.trim();
   state.apiKey = key;
   saveState();
-  showNotif('API key \u05E0\u05E9\u05DE\u05E8!');
+  showNotif('API key נשמר!');
   renderApiKeyIndicator();
   connectWS();
   fetchAllPrices().then(() => renderAll());
@@ -1360,7 +1360,7 @@ async function manualRefresh() {
     if (state.prices[s.ticker]) state.prices[s.ticker].price = null;
   }));
   await smartRefresh();
-  showNotif(anyMarketOpen() ? '\u05DE\u05D7\u05D9\u05E8\u05D9\u05DD \u05E2\u05D5\u05D3\u05DB\u05E0\u05D5 \u2713' : '\u05D1\u05D5\u05E8\u05E1\u05D0\u05D5\u05EA \u05E1\u05D2\u05D5\u05E8\u05D5\u05EA \u2014 \u05DE\u05D7\u05D9\u05E8 \u05D0\u05D7\u05E8\u05D5\u05DF');
+  showNotif(anyMarketOpen() ? 'מחירים עודכנו ✓' : 'בורסאות סגורות — מחיר אחרון');
   if (btn) btn.textContent = '>';
 }
 
@@ -1392,12 +1392,12 @@ function exportData() {
   const a = document.createElement('a');
   const date = new Date().toLocaleDateString('he-IL').replace(/\//g,'-');
   a.href = url;
-  a.download = `\u05EA\u05D9\u05E7\u05D9-\u05DE\u05E0\u05D9\u05D5\u05EA-\u05D2\u05D9\u05D1\u05D5\u05D9-${date}.json`;
+  a.download = `תיקי-מניות-גיבוי-${date}.json`;
   a.click();
   URL.revokeObjectURL(url);
   document.getElementById('backup-status').textContent =
-    `\u2713 \u05D2\u05D9\u05D1\u05D5\u05D9 \u05D9\u05D5\u05E6\u05D0 \u05D1\u05D4\u05E6\u05DC\u05D7\u05D4 \u2014 ${new Date().toLocaleTimeString('he-IL')}`;
-  showNotif('\u05E7\u05D5\u05D1\u05E5 \u05D2\u05D9\u05D1\u05D5\u05D9 \u05D4\u05D5\u05E8\u05D3 \u2713');
+    `✓ גיבוי יוצא בהצלחה — ${new Date().toLocaleTimeString('he-IL')}`;
+  showNotif('קובץ גיבוי הורד ✓');
 }
 
 function importData(event) {
@@ -1408,10 +1408,10 @@ function importData(event) {
     try {
       const backup = JSON.parse(e.target.result);
       if (!backup.portfolios || !Array.isArray(backup.portfolios)) {
-        throw new Error('\u05E7\u05D5\u05D1\u05E5 \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF');
+        throw new Error('קובץ לא תקין');
       }
       const count = backup.portfolios.reduce((n, p) => n + (p.stocks?.length || 0), 0);
-      if (!confirm(`\u05E0\u05DE\u05E6\u05D0\u05D5 ${backup.portfolios.length} \u05EA\u05D9\u05E7\u05D9\u05DD \u05D5-${count} \u05DE\u05E0\u05D9\u05D5\u05EA.\n\u05D4\u05D9\u05D9\u05D1\u05D5\u05D0 \u05D9\u05D7\u05DC\u05D9\u05E3 \u05D0\u05EA \u05D4\u05E0\u05EA\u05D5\u05E0\u05D9\u05DD \u05D4\u05E0\u05D5\u05DB\u05D7\u05D9\u05D9\u05DD. \u05DC\u05D4\u05DE\u05E9\u05D9\u05DA?`)) return;
+      if (!confirm(`נמצאו ${backup.portfolios.length} תיקים ו-${count} מניות.\nהייבוא יחליף את הנתונים הנוכחיים. להמשיך?`)) return;
       state.portfolios = backup.portfolios;
       state.alerts = backup.alerts || [];
       if (backup.apiKey) state.apiKey = backup.apiKey;
@@ -1420,14 +1420,14 @@ function importData(event) {
       document.getElementById('api-key-input').value = state.apiKey || '';
       const status = document.getElementById('backup-status');
       status.style.color = 'var(--green)';
-      status.textContent = `\u2713 \u05D9\u05D5\u05D1\u05D0\u05D5 ${backup.portfolios.length} \u05EA\u05D9\u05E7\u05D9\u05DD (\u05D2\u05D5\u05D1\u05D4: ${backup.exportedAt?.slice(0,10) || '\u05DC\u05D0 \u05D9\u05D3\u05D5\u05E2'})`;
-      showNotif(`\u05D9\u05D5\u05D1\u05D0\u05D5 ${backup.portfolios.length} \u05EA\u05D9\u05E7\u05D9\u05DD \u2713`);
+      status.textContent = `✓ יובאו ${backup.portfolios.length} תיקים (גובה: ${backup.exportedAt?.slice(0,10) || 'לא ידוע'})`;
+      showNotif(`יובאו ${backup.portfolios.length} תיקים ✓`);
       state.prices = {};
       fetchAllPrices().then(() => renderAll());
     } catch(err) {
       document.getElementById('backup-status').style.color = 'var(--red)';
-      document.getElementById('backup-status').textContent = '\u2717 \u05E9\u05D2\u05D9\u05D0\u05D4 \u05D1\u05E7\u05E8\u05D9\u05D0\u05EA \u05D4\u05E7\u05D5\u05D1\u05E5 \u2014 \u05D5\u05D3\u05D0 \u05E9\u05D6\u05D4 \u05E7\u05D5\u05D1\u05E5 \u05D2\u05D9\u05D1\u05D5\u05D9 \u05EA\u05E7\u05D9\u05DF';
-      showNotif('\u05E9\u05D2\u05D9\u05D0\u05D4 \u05D1\u05D9\u05D9\u05D1\u05D5\u05D0 \u2717');
+      document.getElementById('backup-status').textContent = '✗ שגיאה בקריאת הקובץ — ודא שזה קובץ גיבוי תקין';
+      showNotif('שגיאה בייבוא ✗');
     }
     event.target.value = '';
   };
@@ -1436,10 +1436,10 @@ function importData(event) {
 
 function installPWA() {
   if (deferredInstall) { deferredInstall.prompt(); }
-  else { showNotif('\u05E4\u05EA\u05D7 \u05D1\u05D3\u05E4\u05D3\u05E4\u05DF Chrome/Samsung \u05DC\u05D0\u05E4\u05E9\u05E8\u05D5\u05EA \u05D4\u05D4\u05EA\u05E7\u05E0\u05D4'); }
+  else { showNotif('פתח בדפדפן Chrome/Samsung לאפשרות ההתקנה'); }
 }
 
-// \u2500\u2500\u2500 Trading Hours (all times in Israel time = UTC+2/UTC+3) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ─── Trading Hours (all times in Israel time = UTC+2/UTC+3) ───────────────────
 // Returns which markets are currently open
 function openMarkets() {
   const now = new Date();
@@ -1453,15 +1453,15 @@ function openMarkets() {
   // Saturday = always closed
   if (day === 6) return markets;
 
-  // TASE: Sun(0)\u2013Thu(4) 10:00\u201317:25, Fri(5) 10:00\u201314:20
+  // TASE: Sun(0)–Thu(4) 10:00–17:25, Fri(5) 10:00–14:20
   if (day >= 0 && day <= 4 && mins >= 10*60 && mins <= 17*60+25) markets.IL = true;
   if (day === 5 && mins >= 10*60 && mins <= 14*60+20) markets.IL = true;
 
-  // NYSE/NASDAQ: Mon(1)\u2013Fri(5) 16:30\u201323:00 Israel time
-  // (NYSE 09:30\u201316:00 ET = 16:30\u201323:00 Israel summer / 17:30\u201300:00 winter)
+  // NYSE/NASDAQ: Mon(1)–Fri(5) 16:30–23:00 Israel time
+  // (NYSE 09:30–16:00 ET = 16:30–23:00 Israel summer / 17:30–00:00 winter)
   if (day >= 1 && day <= 5 && mins >= 16*60+30 && mins <= 23*60) markets.US = true;
 
-  // LSE: Mon(1)\u2013Fri(5) 11:00\u201319:30 Israel time
+  // LSE: Mon(1)–Fri(5) 11:00–19:30 Israel time
   if (day >= 1 && day <= 5 && mins >= 11*60 && mins <= 19*60+30) markets.UK = true;
 
   return markets;
@@ -1478,22 +1478,22 @@ function marketStatusText() {
   if (m.IL) open.push('IL');
   if (m.US) open.push('US');
   if (m.UK) open.push('UK');
-  return open.length ? `\u05E4\u05E2\u05D9\u05DC: ${open.join(' ')}` : '|| \u05D4\u05D1\u05D5\u05E8\u05E1\u05D5\u05EA \u05E1\u05D2\u05D5\u05E8\u05D5\u05EA';
+  return open.length ? `פעיל: ${open.join(' ')}` : '|| הבורסות סגורות';
 }
 
 function renderApiKeyIndicator() {
   const el = document.getElementById('apikey-indicator');
   if (!el) return;
   if (state.apiKey) {
-    el.textContent = 'KEY \u2713';
+    el.textContent = 'KEY ✓';
     el.style.color = 'var(--green)';
     el.style.borderColor = 'var(--green)';
-    el.title = 'API Key \u05DE\u05D5\u05D2\u05D3\u05E8 \u2713';
+    el.title = 'API Key מוגדר ✓';
   } else {
-    el.textContent = 'KEY \u2717';
+    el.textContent = 'KEY ✗';
     el.style.color = 'var(--red)';
     el.style.borderColor = 'var(--red)';
-    el.title = '\u05D7\u05E1\u05E8 API Key \u2014 \u05DC\u05D7\u05E5 \u05DC\u05D4\u05D2\u05D3\u05E8\u05D5\u05EA';
+    el.title = 'חסר API Key — לחץ להגדרות';
   }
 }
 
@@ -1520,7 +1520,7 @@ function renderMarketStatus() {
       <span style="color:${open ? 'var(--text)' : 'var(--text3)'};">${mk.flag} ${mk.label}</span>
     </span>`;
   }).join('') +
-  `<span style="color:var(--text3);font-size:11px;margin-right:auto;">${timeStr} IL \u00B7 ${anyOpen ? '\u05E4\u05E2\u05D9\u05DC' : '\u05E1\u05D2\u05D5\u05E8'}</span>`;
+  `<span style="color:var(--text3);font-size:11px;margin-right:auto;">${timeStr} IL · ${anyOpen ? 'פעיל' : 'סגור'}</span>`;
 }
 
 // Override renderRateBar to include market status
@@ -1530,7 +1530,7 @@ function renderRateBar() {
   const el = document.getElementById('rate-bar');
   if (!el) return;
   const t = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
-  el.innerHTML = `${t} \u00B7 GBP/ILS ${state.fx.gbpils.toFixed(2)} \u00B7 USD/ILS ${state.fx.usdils.toFixed(2)}`;
+  el.innerHTML = `${t} · GBP/ILS ${state.fx.gbpils.toFixed(2)} · USD/ILS ${state.fx.usdils.toFixed(2)}`;
 }
 
 // Save last known prices to localStorage so they survive app close
@@ -1589,7 +1589,7 @@ function smartConnectWS() {
   }
 }
 
-// Auto refresh \u2014 runs every 60s but smartRefresh decides what to fetch
+// Auto refresh — runs every 60s but smartRefresh decides what to fetch
 setInterval(async () => {
   await fetchFX();
   await smartRefresh();
@@ -1597,16 +1597,16 @@ setInterval(async () => {
   renderMarketStatus();
 }, 60 * 1000);
 
-// Top bar edit button \u2014 inject it
+// Top bar edit button — inject it
 document.querySelector('.topbar-right').insertAdjacentHTML('afterbegin',
-  `<div class="icon-btn" onclick="toggleEdit()" title="\u05E2\u05E8\u05D9\u05DB\u05D4">\u270E</div>`
+  `<div class="icon-btn" onclick="toggleEdit()" title="עריכה">✎</div>`
 );
 
 // Init
 loadState();
 loadLastPrices();
 document.getElementById('api-key-input').value = state.apiKey || '';
-renderAll(); // render immediately \u2014 no loading screen
+renderAll(); // render immediately — no loading screen
 renderMarketStatus();
 renderApiKeyIndicator();
 
@@ -1618,9 +1618,9 @@ fetchFX().then(() => {
   renderAll();
 });
 
-// If no API key \u2014 show hint
+// If no API key — show hint
 if (!state.apiKey) {
-  setTimeout(() => showNotif('\u05D4\u05DB\u05E0\u05E1 Finnhub API key \u05D1\u05D4\u05D2\u05D3\u05E8\u05D5\u05EA \u2699'), 800);
+  setTimeout(() => showNotif('הכנס Finnhub API key בהגדרות ⚙'), 800);
 }
 derApiKeyIndicator();
 
@@ -1632,9 +1632,9 @@ fetchFX().then(() => {
   renderAll();
 });
 
-// If no API key \u2014 show hint
+// If no API key — show hint
 if (!state.apiKey) {
-  setTimeout(() => showNotif('\u05D4\u05DB\u05E0\u05E1 Finnhub API key \u05D1\u05D4\u05D2\u05D3\u05E8\u05D5\u05EA \u2699'), 800);
+  setTimeout(() => showNotif('הכנס Finnhub API key בהגדרות ⚙'), 800);
 }
 </script>
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{});}</script>
