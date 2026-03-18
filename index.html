@@ -327,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v4.3</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v4.4</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -474,7 +474,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v4.3</div>
+          <div class="lbl">Stock Portfolio Tracker v4.4</div>
         </div>
       </div>
     </div>
@@ -1286,6 +1286,7 @@ function saveEditStock(pIdx, sIdx) {
   const qty = parseFloat(document.getElementById(`edit-qty-${sIdx}`)?.value);
   const cost = parseFloat(document.getElementById(`edit-cost-${sIdx}`)?.value);
   const market = document.getElementById(`edit-market-${sIdx}`)?.value;
+  const costCur = document.getElementById(`edit-cost-cur-${sIdx}`)?.value || s.costCurrency || null;
   if (!qty || isNaN(cost)) { showNotif('שגיאה בקלט'); return; }
   s.name = name || s.name;
   s.qty = qty;
@@ -1294,10 +1295,10 @@ function saveEditStock(pIdx, sIdx) {
   s.costCurrency = costCur;
   saveState();
   formOpen = false;
-  // Clear cached price to force re-fetch with possibly new market
   if (state.prices[s.ticker]) delete state.prices[s.ticker].price;
   fetchAllPrices().then(() => renderAll());
   showNotif(`${s.ticker} עודכן ✓`);
+  renderPortfolioView(); // force close the edit form
 }
 
 function cancelEditStock() {
