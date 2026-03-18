@@ -13,27 +13,27 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #0a0a0f;
-  --bg2: #13131a;
-  --bg3: #1c1c26;
-  --border: rgba(255,255,255,0.07);
-  --border2: rgba(255,255,255,0.12);
-  --text: #f0f0f5;
-  --text2: #8888a0;
-  --text3: #55556a;
-  --green: #00d4a0;
-  --green2: #00a880;
-  --red: #ff5566;
-  --red2: #cc3344;
-  --gold: #f0b429;
-  --blue: #4488ff;
+  --bg: #f5f5f7;
+  --bg2: #ffffff;
+  --bg3: #f0f0f2;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.14);
+  --text: #1a1a1a;
+  --text2: #555566;
+  --text3: #999aaa;
+  --green: #00915a;
+  --green2: #007a4a;
+  --red: #d42030;
+  --red2: #b01020;
+  --gold: #c07a00;
+  --blue: #1a66dd;
   --mono: 'IBM Plex Mono', monospace;
   --sans: 'Heebo', sans-serif;
   --r: 10px;
   --r2: 16px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--sans); }
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
 body { display: flex; flex-direction: column; }
 
 /* NAV */
@@ -56,7 +56,7 @@ body { display: flex; flex-direction: column; }
 .icon-btn:active { background: var(--bg2); }
 .live-dot {
   width: 7px; height: 7px; border-radius: 50%; background: var(--green);
-  box-shadow: 0 0 6px var(--green);
+  box-shadow: 0 0 4px var(--green);
   animation: pulse 2s infinite;
 }
 .live-dot.off { background: var(--text3); box-shadow: none; animation: none; }
@@ -93,7 +93,7 @@ body { display: flex; flex-direction: column; }
 .total-card::before {
   content: '';
   position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, var(--green), var(--blue));
+  background: linear-gradient(90deg, #00915a, #1a66dd);
 }
 .total-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 2px; }
 .total-ils { font-family: var(--mono); font-size: 20px; font-weight: 500; letter-spacing: -0.5px; display:inline; }
@@ -235,22 +235,10 @@ body { display: flex; flex-direction: column; }
 }
 .stocks-list { display: flex; flex-direction: column; }
 .stock-card {
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-top: 0.5px solid var(--border);
 }
 .stock-card:active { background: var(--bg3); }
-.sc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
-.sc-qty { font-size: 10px; color: var(--text3); margin-top: 2px; font-family: var(--mono); }
-.sc-val { font-family: var(--mono); font-size: 13px; font-weight: 500; text-align: left; }
-.sc-val-usd { font-family: var(--mono); font-size: 10px; color: var(--text2); text-align: left; }
-.sc-bottom {
-  display: grid; grid-template-columns: repeat(4, 1fr);
-  gap: 4px; background: var(--bg3);
-  border-radius: 6px; padding: 5px;
-}
-.sc-metric { text-align: center; }
-.sc-metric-lbl { font-size: 8px; color: var(--text3); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.3px; }
-.sc-metric-val { font-family: var(--mono); font-size: 10px; font-weight: 500; line-height: 1.2; }
 
 /* ALERTS */
 .section { margin: 0 12px 12px; }
@@ -340,7 +328,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v2.6</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v3.2</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -480,7 +468,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v2.6</div>
+          <div class="lbl">Stock Portfolio Tracker v3.2</div>
         </div>
       </div>
     </div>
@@ -724,21 +712,41 @@ async function fetchAllPrices() {
 
 // Currency conversion
 function toILS(price, currency, market) {
-  // If we have a currency from the API, use it precisely
+  // API currency takes priority -- always use it if available
   if (currency) {
     const c = currency.toUpperCase();
     if (['ILS','ILA','ILX'].includes(c)) return price;
     if (c === 'USD') return price * state.fx.usdils;
     if (c === 'GBP') return price * state.fx.gbpils;
-    if (['GBP','GBX'].includes(c)) return price * state.fx.gbpils / 100;
-    // GBp = pence (100 pence = 1 GBP)
+    // GBp / GBX = pence (divide by 100 to get GBP first)
+    if (c === 'GBP' || c === 'GBX') return price * state.fx.gbpils / 100;
     if (currency === 'GBp') return price * state.fx.gbpils / 100;
+    // EUR
+    if (c === 'EUR') return price * (state.fx.usdils / (state.fx.eurUsd || 1.08));
   }
-  // Fall back to market
+  // Fallback to market (when no API currency -- e.g. cost entered by user)
   if (market === 'IL') return price;
   if (market === 'US') return price * state.fx.usdils;
+  // UK fallback: assume GBp (pence) for LSE stocks
   if (market === 'UK') return price * state.fx.gbpils / 100;
   return price;
+}
+
+// Convert user-entered cost to ILS based on market
+// User always enters cost in the native currency of the market:
+// IL -> ILS (shekels), US -> USD (dollars), UK -> GBp (pence)
+function costToILS(costPerShare, market, costCurrency) {
+  const cur = costCurrency || null;
+  if (cur === 'ILS') return costPerShare;         // explicit shekels
+  if (cur === 'ILA') return costPerShare / 100;   // explicit agorot
+  if (cur === 'USD' || cur === 'US') return costPerShare * state.fx.usdils;
+  if (cur === 'GBP') return costPerShare * state.fx.gbpils;
+  if (cur === 'GBp') return costPerShare * state.fx.gbpils / 100;
+  // No explicit currency -- infer from market
+  if (market === 'IL') return costPerShare / 100; // IL: user enters agorot
+  if (market === 'US') return costPerShare * state.fx.usdils;
+  if (market === 'UK') return costPerShare * state.fx.gbpils / 100; // GBp default
+  return costPerShare;
 }
 
 function fmtILS(v) {
@@ -777,7 +785,7 @@ function computePortfolio(p) {
     if (price != null) {
       const val = toILS(price * s.qty, cur, s.market);
       const prevVal = toILS((prev || price) * s.qty, cur, s.market);
-      const cost = toILS(s.cost * s.qty, null, s.market);
+      const cost = costToILS(s.cost, s.market, s.costCurrency) * s.qty;
       s._valILS = val;
       s._valUSD = val / state.fx.usdils;
       s._costILS = cost;
@@ -788,7 +796,7 @@ function computePortfolio(p) {
       s._prev = prev;
       totalILS += val; costILS += cost; dayILS += val - prevVal;
     } else {
-      const est = toILS(s.cost * s.qty, null, s.market);
+      const est = costToILS(s.cost, s.market, s.costCurrency) * s.qty;
       s._valILS = est; s._valUSD = est / state.fx.usdils;
       s._costILS = est; s._costUSD = est / state.fx.usdils;
       s._dayILS = 0; s._dayPct = 0; s._price = null;
@@ -848,10 +856,17 @@ function renderPortfolioView() {
           <option value="UK">UK \u05DC\u05D5\u05E0\u05D3\u05D5\u05DF</option>
         </select>
       </div>
-      <input type="text" id="ns-name" placeholder="\u05E9\u05DD \u05D4\u05D7\u05D1\u05E8\u05D4" onfocus="formOpen=true" onblur="formOpen=true">
+      <input type="text" id="ns-name" placeholder="\u05E9\u05DD \u05D4\u05D7\u05D1\u05E8\u05D4 (\u05D0\u05D5\u05D8\u05D5\u05DE\u05D8\u05D9 \u05D0\u05DD \u05E8\u05D9\u05E7)" onfocus="formOpen=true" onblur="formOpen=true">
       <div class="row">
-        <input type="number" id="ns-qty" placeholder="\u05DB\u05DE\u05D5\u05EA \u05DE\u05E0\u05D9\u05D5\u05EA" style="flex:1;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
-        <input type="number" id="ns-cost" placeholder="\u05E2\u05DC\u05D5\u05EA \u05E8\u05DB\u05D9\u05E9\u05D4 \u05DC\u05DE\u05E0\u05D9\u05D9\u05D4" style="flex:2;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
+        <input type="number" id="ns-qty" placeholder="\u05DB\u05DE\u05D5\u05EA" style="flex:1;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
+        <input type="number" id="ns-cost" placeholder="\u05E2\u05DC\u05D5\u05EA (IL=\u05D0\u05D2\u05D5\u05E8\u05D5\u05EA, US=$, UK=GBp)" style="flex:2;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
+        <select id="ns-cost-currency" onfocus="formOpen=true" style="flex:1;">
+          <option value="">\u05D0\u05D5\u05D8\u05D5</option>
+          <option value="USD">$</option>
+          <option value="ILS">\u20AA</option>
+          <option value="GBp">GBp</option>
+          <option value="GBP">\u00A3</option>
+        </select>
       </div>
       <button class="btn-primary" onclick="addStockToPort(${state.currentPort})">+ \u05D4\u05D5\u05E1\u05E3 \u05DE\u05E0\u05D9\u05D9\u05D4</button>
     </div>`;
@@ -866,58 +881,77 @@ function renderPortfolioView() {
   } else {
     stockCardsHTML = p.stocks.map((s, si) => {
       const hasPrice = s._price != null && s._price > 0;
+
       const priceStr = hasPrice
         ? s._price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
-        : '\u2014';
-      const prevStr = hasPrice && s._prev
-        ? s._prev.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
         : '\u2014';
 
       const valILS = s._valILS || s._costILS || 0;
       const valUSD = valILS / state.fx.usdils;
 
       const dayILS = s._dayILS || 0;
-      const dayPct = s._dayPct || 0;
       const dayUSD = dayILS / state.fx.usdils;
+      const dayPct = s._dayPct || 0;
 
       const gainILS = valILS - (s._costILS || 0);
       const gainUSD = gainILS / state.fx.usdils;
       const gainPct = s._costILS > 0 ? ((gainILS / s._costILS) * 100) : 0;
 
+      const costPerShare = s.cost;
+      const costStr = costPerShare > 0
+        ? costPerShare.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+        : '\u05D7\u05D9\u05E0\u05DD (RSU)';
+
+      const dayColor = dayILS >= 0 ? 'var(--green)' : 'var(--red)';
+      const gainColor = gainILS >= 0 ? 'var(--green)' : 'var(--red)';
+
       const delBtn = state.editMode
-        ? `<button class="del-btn" onclick="removeStock(${state.currentPort},${si})" style="position:absolute;top:10px;left:10px;">\u2715</button>`
+        ? `<div style="position:absolute;top:6px;left:6px;display:flex;gap:4px;">
+            <button onclick="editStock(${state.currentPort},${si})"
+              style="background:var(--bg3);border:0.5px solid var(--border2);border-radius:5px;padding:2px 7px;font-size:11px;cursor:pointer;color:var(--text2);">\u05E2\u05E8\u05D5\u05DA</button>
+            <button onclick="removeStock(${state.currentPort},${si})"
+              style="background:none;border:0.5px solid var(--red);border-radius:5px;padding:2px 7px;font-size:11px;cursor:pointer;color:var(--red);">\u05DE\u05D7\u05E7</button>
+          </div>`
         : '';
 
-      return `<div class="stock-card" style="position:relative;">
+      const priceChangeVal = hasPrice && s._prev ? (s._price - s._prev) : 0;
+      const priceChangeSgn = priceChangeVal >= 0 ? '+' : '';
+
+      return `<div class="stock-card" id="stock-card-${state.currentPort}-${si}" style="position:relative;">
         ${delBtn}
-        <div class="sc-top">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
           <div>
             <div class="s-ticker">${s.ticker.replace('.TA','').replace('.L','')} <span class="badge ${s.market.toLowerCase()}">${s.market}</span></div>
             <div class="s-name">${s.name}</div>
-            <div class="sc-qty"><span dir="ltr">${s.qty.toLocaleString()}</span> \u05DE\u05E0\u05D9\u05D5\u05EA \u00B7 <span dir="ltr">${priceStr}</span>${hasPrice ? ` \u00B7 <span style="color:${dayILS >= 0 ? 'var(--green)' : 'var(--red)'};font-size:11px;" dir="ltr">${dayILS >= 0 ? '+' : ''}${(s._price - s._prev).toFixed(2)}</span>` : ''}</div>
           </div>
           <div style="text-align:left;">
-            <div class="sc-val">${fmtILS(valILS)}</div>
-            <div class="sc-val-usd">${fmtUSD(valUSD)}</div>
+            <div style="font-family:var(--mono);font-size:15px;font-weight:600;" dir="ltr">${priceStr}</div>
+            ${hasPrice ? `<div style="font-family:var(--mono);font-size:10px;color:${dayColor};" dir="ltr">${priceChangeSgn}${priceChangeVal.toFixed(2)}</div>` : ''}
           </div>
         </div>
-        <div class="sc-bottom">
-          <div class="sc-metric">
-            <div class="sc-metric-lbl">\u05D9\u05D5\u05DE\u05D9 %</div>
-            <div class="sc-metric-val ${cls(dayPct)}">${sign(dayPct)}${dayPct.toFixed(2)}%</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:10px;">
+
+          <div style="background:var(--bg3);border-radius:6px;padding:5px 7px;">
+            <div style="color:var(--text3);margin-bottom:2px;">\u05DE\u05D7\u05D9\u05E8 \u05E7\u05E0\u05D9\u05D9\u05D4</div>
+            <div style="font-family:var(--mono);font-size:10px;" dir="ltr">${s.qty.toLocaleString()} \u00D7 ${costStr}</div>
+            <div style="font-family:var(--mono);font-size:11px;font-weight:500;">${fmtILS(s._costILS||0)}</div>
           </div>
-          <div class="sc-metric">
-            <div class="sc-metric-lbl">\u05D9\u05D5\u05DE\u05D9 \u20AA</div>
-            <div class="sc-metric-val ${cls(dayILS)}">${sign(dayILS)}${fmtILS(Math.abs(dayILS))}</div>
+
+          <div style="background:var(--bg3);border-radius:6px;padding:5px 7px;">
+            <div style="color:var(--text3);margin-bottom:2px;">\u05E9\u05D9\u05E0\u05D5\u05D9 \u05D9\u05D5\u05DE\u05D9</div>
+            <div style="font-family:var(--mono);font-size:11px;font-weight:500;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${fmtILS(dayILS)}</div>
+            <div style="font-family:var(--mono);font-size:10px;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${fmtUSD(Math.abs(dayUSD))} / ${dayILS >= 0 ? '+' : ''}${dayPct.toFixed(2)}%</div>
           </div>
-          <div class="sc-metric">
-            <div class="sc-metric-lbl">\u05E8\u05D5\u05D5\u05D7 \u05DB\u05D5\u05DC\u05DC</div>
-            <div class="sc-metric-val ${cls(gainILS)}">${sign(gainILS)}${fmtILS(Math.abs(gainILS))}<br><span style="font-size:10px;">${sign(gainPct)}${gainPct.toFixed(1)}%</span></div>
+
+          <div style="background:var(--bg3);border-radius:6px;padding:5px 7px;">
+            <div style="color:var(--text3);margin-bottom:2px;">\u05E9\u05D5\u05D5\u05D9 \u05DB\u05D5\u05DC\u05DC</div>
+            <div style="font-family:var(--mono);font-size:11px;font-weight:500;">${fmtILS(valILS)}</div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--text2);">${fmtUSD(valUSD)}</div>
+            <div style="font-family:var(--mono);font-size:10px;font-weight:500;color:${gainColor};margin-top:2px;">${gainILS >= 0 ? '+' : ''}${fmtILS(gainILS)} (${gainILS >= 0 ? '+' : ''}${gainPct.toFixed(1)}%)</div>
+            <div style="font-family:var(--mono);font-size:10px;color:${gainColor};">${gainILS >= 0 ? '+' : ''}${fmtUSD(Math.abs(gainUSD))}</div>
           </div>
-          <div class="sc-metric">
-            <div class="sc-metric-lbl">\u05E8\u05D5\u05D5\u05D7 $</div>
-            <div class="sc-metric-val ${cls(gainUSD)}">${sign(gainUSD)}${fmtUSD(Math.abs(gainUSD))}</div>
-          </div>
+
         </div>
       </div>`;
     }).join('');
@@ -1047,41 +1081,97 @@ async function searchTicker(rawTicker) {
   } catch(e) { return null; }
 }
 
+async function autoDetectName(ticker, market) {
+  // Try Yahoo Finance first -- works for all markets
+  try {
+    const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`;
+    const r = await fetchWithTimeout(proxyUrl, 6000);
+    if (r.ok) {
+      const d = await r.json();
+      const meta = d.result?.[0]?.meta || d.chart?.result?.[0]?.meta;
+      if (meta?.longName) return meta.longName;
+      if (meta?.shortName) return meta.shortName;
+    }
+  } catch(e) {}
+  // Fallback: Finnhub search (US only)
+  if (market === 'US' && state.apiKey) {
+    try {
+      const r = await fetchWithTimeout(
+        `https://finnhub.io/api/v1/search?q=${encodeURIComponent(ticker)}&token=${state.apiKey}`, 5000);
+      if (r.ok) {
+        const d = await r.json();
+        const exact = d.result?.find(s => s.symbol === ticker);
+        if (exact?.description) return exact.description;
+      }
+    } catch(e) {}
+  }
+  return null;
+}
+
 async function addStockToPort(pIdx) {
   const rawTicker = document.getElementById('ns-ticker')?.value.trim().toUpperCase();
-  const name = document.getElementById('ns-name')?.value.trim();
+  const nameInput = document.getElementById('ns-name')?.value.trim();
   const qty = parseFloat(document.getElementById('ns-qty')?.value);
   const cost = parseFloat(document.getElementById('ns-cost')?.value);
   const selectedMarket = document.getElementById('ns-market')?.value;
-  if (!rawTicker || !qty || isNaN(cost)) { showNotif('\u05D9\u05E9 \u05DC\u05DE\u05DC\u05D0 \u05E1\u05D9\u05DE\u05D5\u05DC, \u05DB\u05DE\u05D5\u05EA \u05D5\u05E2\u05DC\u05D5\u05EA (\u05E2\u05DC\u05D5\u05EA 0 \u05EA\u05E7\u05D9\u05E0\u05D4 \u05DC-RSU)'); return; }
+  const costCurrency = document.getElementById('ns-cost-currency')?.value || null;
+  if (!rawTicker || !qty || isNaN(cost)) {
+    showNotif('\u05D9\u05E9 \u05DC\u05DE\u05DC\u05D0 \u05E1\u05D9\u05DE\u05D5\u05DC, \u05DB\u05DE\u05D5\u05EA \u05D5\u05E2\u05DC\u05D5\u05EA (\u05E2\u05DC\u05D5\u05EA 0 \u05EA\u05E7\u05D9\u05E0\u05D4 \u05DC-RSU)');
+    return;
+  }
 
   const btn = document.querySelector(`button[onclick="addStockToPort(${pIdx})"]`);
   if (btn) btn.textContent = '\u05DE\u05D6\u05D4\u05D4...';
 
-  // Auto-detect market from ticker suffix or Finnhub search
   let ticker = rawTicker;
   let market = selectedMarket;
-  let autoName = name;
 
-  if (rawTicker.endsWith('.TA')) { market = 'IL'; }
-  else if (rawTicker.endsWith('.L')) { market = 'UK'; }
-  else if (!rawTicker.includes('.')) {
-    // Try to detect via Finnhub search
-    const found = await searchTicker(rawTicker);
-    if (found) {
-      ticker = found.symbol;
-      if (!autoName) autoName = found.description;
-      if (ticker.endsWith('.TA')) market = 'IL';
-      else if (ticker.endsWith('.L')) market = 'UK';
-      else market = 'US';
+  // Auto-detect market from suffix
+  if (rawTicker.endsWith('.TA')) {
+    market = 'IL';
+  } else if (rawTicker.endsWith('.L')) {
+    market = 'UK';
+  } else if (!rawTicker.includes('.')) {
+    // No suffix -- try TASE first by appending .TA and checking Yahoo
+    if (btn) btn.textContent = '\u05D1\u05D5\u05D3\u05E7...';
+    const taTest = await fetchREST(rawTicker + '.TA', 'IL');
+    if (taTest && taTest.price && taTest.price > 0) {
+      // Found on TASE
+      ticker = rawTicker + '.TA';
+      market = 'IL';
+    } else {
+      // Default to US
+      market = 'US';
     }
   }
 
-  state.portfolios[pIdx].stocks.push({ ticker, name: autoName || ticker, qty, cost, market });
+  // Auto-detect name and currency from API
+  let autoName = nameInput;
+  let autoCostCurrency = costCurrency || null;
+
+  if (btn) btn.textContent = '\u05DE\u05D6\u05D4\u05D4...';
+  // Fetch price to get API currency
+  const priceData = await fetchREST(ticker, market);
+  if (priceData) {
+    state.prices[ticker] = { price: priceData.price, prev: priceData.prev || priceData.price, currency: priceData.currency, t: Date.now() };
+    // For UK stocks: if API says USD, cost should be in USD not GBp
+    if (market === 'UK' && priceData.currency === 'USD' && !costCurrency) {
+      autoCostCurrency = 'USD';
+    }
+  }
+
+  if (!autoName) {
+    if (btn) btn.textContent = '\u05DE\u05D7\u05E4\u05E9 \u05E9\u05DD...';
+    autoName = await autoDetectName(ticker, market);
+  }
+
+  state.portfolios[pIdx].stocks.push({ ticker, name: autoName || ticker, qty, cost, market, costCurrency: autoCostCurrency });
   saveState();
   formOpen = false;
   fetchAllPrices().then(() => renderAll());
-  showNotif(`${ticker} (${market}) \u05E0\u05D5\u05E1\u05E3 \u05DC\u05EA\u05D9\u05E7 \u2713`);
+  const curLabel = autoCostCurrency === 'USD' ? '($)' : autoCostCurrency === 'ILS' ? '(\u20AA)' : autoCostCurrency === 'GBp' ? '(GBp)' : market === 'IL' ? '(\u05D0\u05D2)' : market === 'US' ? '($)' : '(GBp)';
+  showNotif(`${ticker} \u05E0\u05D5\u05E1\u05E3 ${curLabel} \u2013 ${autoName || ticker} \u2713`);
   if (btn) btn.textContent = '+ \u05D4\u05D5\u05E1\u05E3 \u05DE\u05E0\u05D9\u05D9\u05D4';
   if (market === 'US' && ws && ws.readyState === 1) {
     ws.send(JSON.stringify({ type:'subscribe', symbol: ticker }));
@@ -1092,6 +1182,70 @@ function removeStock(pIdx, sIdx) {
   state.portfolios[pIdx].stocks.splice(sIdx, 1);
   saveState();
   renderAll();
+}
+
+function editStock(pIdx, sIdx) {
+  const s = state.portfolios[pIdx].stocks[sIdx];
+  if (!s) return;
+  // Build inline edit form inside the card
+  const cardId = `stock-card-${pIdx}-${sIdx}`;
+  const card = document.getElementById(cardId);
+  if (!card) return;
+  formOpen = true;
+  card.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:6px;padding:2px 0;">
+      <div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:2px;">\u05E2\u05E8\u05D9\u05DB\u05EA ${s.ticker}</div>
+      <div style="display:flex;gap:6px;">
+        <input id="edit-name-${sIdx}" type="text" value="${s.name}" placeholder="\u05E9\u05DD \u05D7\u05D1\u05E8\u05D4"
+          style="flex:2;background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--text);"
+          onfocus="formOpen=true" onblur="formOpen=true">
+        <select id="edit-market-${sIdx}" onfocus="formOpen=true"
+          style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:6px 4px;font-size:12px;color:var(--text);">
+          <option value="US" ${s.market==='US'?'selected':''}>US</option>
+          <option value="IL" ${s.market==='IL'?'selected':''}>IL</option>
+          <option value="UK" ${s.market==='UK'?'selected':''}>UK</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <input id="edit-qty-${sIdx}" type="number" value="${s.qty}" placeholder="\u05DB\u05DE\u05D5\u05EA"
+          style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--text);direction:ltr;"
+          onfocus="formOpen=true" onblur="formOpen=true">
+        <input id="edit-cost-${sIdx}" type="number" value="${s.cost}" placeholder="\u05E2\u05DC\u05D5\u05EA \u05DC\u05DE\u05E0\u05D9\u05D9\u05D4"
+          style="flex:2;background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--text);direction:ltr;"
+          onfocus="formOpen=true" onblur="formOpen=true">
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button onclick="saveEditStock(${pIdx},${sIdx})"
+          style="flex:2;background:var(--green);color:#fff;border:none;border-radius:6px;padding:7px;font-size:12px;font-weight:600;cursor:pointer;">\u05E9\u05DE\u05D5\u05E8</button>
+        <button onclick="cancelEditStock()"
+          style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:7px;font-size:12px;cursor:pointer;color:var(--text2);">\u05D1\u05D8\u05DC</button>
+      </div>
+    </div>`;
+}
+
+function saveEditStock(pIdx, sIdx) {
+  const s = state.portfolios[pIdx].stocks[sIdx];
+  const name = document.getElementById(`edit-name-${sIdx}`)?.value.trim();
+  const qty = parseFloat(document.getElementById(`edit-qty-${sIdx}`)?.value);
+  const cost = parseFloat(document.getElementById(`edit-cost-${sIdx}`)?.value);
+  const market = document.getElementById(`edit-market-${sIdx}`)?.value;
+  if (!qty || isNaN(cost)) { showNotif('\u05E9\u05D2\u05D9\u05D0\u05D4 \u05D1\u05E7\u05DC\u05D8'); return; }
+  s.name = name || s.name;
+  s.qty = qty;
+  s.cost = cost;
+  s.market = market;
+  s.costCurrency = costCur;
+  saveState();
+  formOpen = false;
+  // Clear cached price to force re-fetch with possibly new market
+  if (state.prices[s.ticker]) delete state.prices[s.ticker].price;
+  fetchAllPrices().then(() => renderAll());
+  showNotif(`${s.ticker} \u05E2\u05D5\u05D3\u05DB\u05DF \u2713`);
+}
+
+function cancelEditStock() {
+  formOpen = false;
+  renderPortfolioView();
 }
 
 function addPortfolio() {
