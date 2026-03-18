@@ -327,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v4.7</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v5.1</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -474,7 +474,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v4.7</div>
+          <div class="lbl">Stock Portfolio Tracker v5.1</div>
         </div>
       </div>
     </div>
@@ -663,14 +663,38 @@ async function fetchFinnhubREST(ticker) {
 // Yahoo Finance via multiple CORS proxies
 async function fetchYahoo(ticker) {
   const sym = encodeURIComponent(ticker);
-  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=2d`;
-  // allorigins is most reliable for GitHub Pages hosted apps
+
+  // Try v7/quote first — gives regularMarketChange, regularMarketChangePercent
+  const quoteUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${sym}&fields=regularMarketPrice,regularMarketChange,regularMarketChangePercent,regularMarketPreviousClose,currency,longName,shortName`;
   const proxies = [
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl.replace('query1','query2'))}`,
-    yahooUrl,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(quoteUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(quoteUrl.replace('query1','query2'))}`,
   ];
   for (const url of proxies) {
+    try {
+      const r = await fetchWithTimeout(url, 8000);
+      if (!r.ok) continue;
+      const d = await r.json();
+      const result = d?.quoteResponse?.result?.[0];
+      if (!result || !result.regularMarketPrice) continue;
+      const price = result.regularMarketPrice;
+      const prev = result.regularMarketPreviousClose || price;
+      const change = result.regularMarketChange || (price - prev);
+      const changePct = result.regularMarketChangePercent || 0;
+      const currency = result.currency || 'USD';
+      const name = result.longName || result.shortName || null;
+      return { price, prev, change, changePct, currency, name };
+    } catch(e) { continue; }
+  }
+
+  // Fallback: v8/chart
+  const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=2d`;
+  const chartProxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(chartUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(chartUrl.replace('query1','query2'))}`,
+    chartUrl,
+  ];
+  for (const url of chartProxies) {
     try {
       const r = await fetchWithTimeout(url, 8000);
       if (!r.ok) continue;
@@ -680,20 +704,90 @@ async function fetchYahoo(ticker) {
       if (!res?.[0]) continue;
       const meta = res[0].meta;
       const price = meta.regularMarketPrice;
-      const prev = meta.previousClose || meta.chartPreviousClose;
-      if (price && price > 0) return { price, prev, currency: meta.currency };
-    } catch(e) { console.warn('Yahoo proxy failed:', url.slice(0,50), e.message); continue; }
+      const prev = meta.previousClose || meta.chartPreviousClose || price;
+      if (price && price > 0) {
+        return {
+          price,
+          prev,
+          change: price - prev,
+          changePct: prev > 0 ? ((price - prev) / prev * 100) : 0,
+          currency: meta.currency,
+          name: meta.longName || meta.shortName || null
+        };
+      }
+    } catch(e) { continue; }
   }
   return null;
 }
 
+async function fetchMayaFund(fundId) {
+  const cleanId = fundId.replace('.TA', '');
+  // Try multiple TASE API endpoints (no auth required for basic data)
+  const endpoints = [
+    // api.tase.co.il - the official TASE API used by pymaya
+    `https://api.tase.co.il/api/fund/mutual/live/${cleanId}`,
+    `https://api.tase.co.il/api/security/trading/history/${cleanId}?period=daily&from=&to=`,
+    // Fallback: try Yahoo with .TA suffix (mutual funds also listed there)
+  ];
+  for (const apiUrl of endpoints) {
+    try {
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+      const r = await fetchWithTimeout(proxyUrl, 8000);
+      if (!r.ok) continue;
+      const d = await r.json();
+      // Handle various response formats
+      let nav = null, prevNav = null, name = null;
+      if (d && typeof d === 'object') {
+        // Format: { Rate, PrevRate, Name } or { AssetValue, PrevAssetValue }
+        nav = d.Rate || d.AssetValue || d.nav || d.price || d.NAV;
+        prevNav = d.PrevRate || d.PrevAssetValue || d.prevNav || d.prevPrice || nav;
+        name = d.Name || d.FundName || d.SecurityName || d.name;
+        // Some APIs return array
+        if (Array.isArray(d) && d.length > 0) {
+          nav = d[0].Rate || d[0].CloseRate || d[0].Price;
+          prevNav = d[1]?.Rate || d[1]?.CloseRate || nav;
+        }
+      }
+      if (nav && nav > 0) {
+        // TASE fund prices are in ILA (agorot) — divide by 100 for ILS display
+        return {
+          price: nav,
+          prev: prevNav || nav,
+          change: nav - (prevNav || nav),
+          changePct: prevNav > 0 ? ((nav - prevNav) / prevNav * 100) : 0,
+          currency: 'ILA',
+          name: name,
+          isMutualFund: true
+        };
+      }
+    } catch(e) { continue; }
+  }
+  // Final fallback: try Yahoo Finance (some funds appear there)
+  const yahooResult = await fetchYahoo(fundId);
+  if (yahooResult) {
+    return { ...yahooResult, isMutualFund: true };
+  }
+  return null;
+}
+
+async function isMutualFund(tickerId) {
+  // Heuristic: 7-digit number = likely Israeli mutual fund
+  const clean = tickerId.replace('.TA', '');
+  return /^\d{7}$/.test(clean);
+}
+
 async function fetchREST(ticker, market) {
-  // US: try Finnhub first (reliable, API key), fall back to Yahoo
+  // Israeli mutual funds (7-digit number): use Maya TASE API
+  if (market === 'IL' && await isMutualFund(ticker)) {
+    const r = await fetchMayaFund(ticker);
+    if (r) return r;
+  }
+  // US stocks: try Finnhub first
   if (market === 'US') {
     const r = await fetchFinnhubREST(ticker);
     if (r) return r;
   }
-  // IL / UK / fallback: Yahoo proxies
+  // Fallback: Yahoo Finance
   return await fetchYahoo(ticker);
 }
 
@@ -708,6 +802,7 @@ async function fetchAllPrices() {
             price: d.price,
             prev: d.prev || d.price,
             currency: d.currency,
+            name: d.name || null,
             t: Date.now()
           };
         }
@@ -863,6 +958,7 @@ function renderPortfolioView() {
         <input type="number" id="ns-cost" placeholder="עלות (במטבע הבורסה)"
           style="flex:2;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
       </div>
+      <div id="ns-cost-hint" style="font-size:11px;color:var(--text3);font-family:var(--mono);min-height:14px;"></div>
       <button class="btn-primary" onclick="addStockToPort(${state.currentPort})">+ הוסף מנייה</button>
     </div>`;
   }
@@ -891,7 +987,10 @@ function renderPortfolioView() {
     }
     stockCardsHTML = sortedStocks.map(({ s, si }) => {
       const hasPrice = s._price != null && s._price > 0;
-      // If API returns agorot (ILA), display as shekels (/100)
+      // Mutual funds: NAV in ILS (shekels), not ILA
+  // If stock type is fund, treat ILA as ILS (some funds report in ILA, divide by 100)
+  const effectiveCurrency = s._apiCurrency === 'ILA' ? 'ILA' : s._apiCurrency;
+  // If API returns agorot (ILA), display as shekels (/100)
   const displayPrice = hasPrice
     ? (s._apiCurrency === 'ILA' ? s._price / 100 : s._price)
     : null;
@@ -933,7 +1032,7 @@ function renderPortfolioView() {
           <!-- COL 1: ticker + name + price + cost info -->
           <div>
             <div style="display:flex;align-items:center;gap:4px;">
-              <span class="s-ticker">${s.ticker.replace('.TA','').replace('.L','')} <span class="badge ${s.market.toLowerCase()}">${s.market}</span></span>
+              <span class="s-ticker">${s.ticker.replace('.TA','').replace('.L','')} <span class="badge ${s.market.toLowerCase()}">${s.isMutualFund ? 'קרן' : s.market}</span></span>
               <span style="font-family:var(--mono);font-size:11px;font-weight:600;" dir="ltr">${priceCurSymbol}${priceStr}</span>
               ${hasPrice ? `<span style="font-family:var(--mono);font-size:10px;color:${priceChangeRaw >= 0 ? 'var(--green)' : 'var(--red)'};" dir="ltr">${priceChangeRaw >= 0 ? '+' : ''}${priceChangeRaw.toFixed(2)}</span>` : ''}
             </div>
@@ -1072,6 +1171,29 @@ function prevPort() { gotoPort((state.currentPort - 1 + state.portfolios.length)
 function nextPort() { gotoPort((state.currentPort + 1) % state.portfolios.length); }
 function gotoPort(i) { state.currentPort = i; renderPortfolioView(); }
 
+function showCostHint(val) {
+  const el = document.getElementById('ns-cost-hint');
+  if (!el) return;
+  const num = parseFloat(val);
+  if (!num || isNaN(num)) { el.textContent = ''; return; }
+  // Try to guess currency from last detected ticker
+  const lastTicker = document.getElementById('ns-ticker')?.value.trim().toUpperCase();
+  const cached = lastTicker ? state.prices[lastTicker + (lastTicker.endsWith('.TA') ? '' : '.TA')] || state.prices[lastTicker] : null;
+  const cur = cached?.currency;
+  if (cur === 'ILA') {
+    el.textContent = '= ₪' + (num / 100).toLocaleString('he-IL', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' למנייה';
+    el.style.color = 'var(--blue)';
+  } else if (cur === 'USD') {
+    el.textContent = '= ₪' + (num * state.fx.usdils).toLocaleString('he-IL', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' למנייה';
+    el.style.color = 'var(--blue)';
+  } else if (cur === 'GBp') {
+    el.textContent = '= ₪' + (num * state.fx.gbpils / 100).toLocaleString('he-IL', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' למנייה';
+    el.style.color = 'var(--blue)';
+  } else {
+    el.textContent = '';
+  }
+}
+
 function setSort(s) {
   sortBy = s;
   document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
@@ -1104,30 +1226,23 @@ async function searchTicker(rawTicker) {
 }
 
 async function autoDetectName(ticker, market) {
-  // Try Yahoo Finance first -- works for all markets
+  // Check if already fetched via fetchYahoo (name comes with price data)
+  const cached = state.prices[ticker];
+  if (cached?.name) return cached.name;
+  // Try Yahoo v7/quote
   try {
-    const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`;
-    const r = await fetchWithTimeout(proxyUrl, 6000);
+    const sym = encodeURIComponent(ticker);
+    const url = `https://api.allorigins.win/raw?url=${encodeURIComponent(
+      `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${sym}&fields=longName,shortName`
+    )}`;
+    const r = await fetchWithTimeout(url, 6000);
     if (r.ok) {
       const d = await r.json();
-      const meta = d.result?.[0]?.meta || d.chart?.result?.[0]?.meta;
-      if (meta?.longName) return meta.longName;
-      if (meta?.shortName) return meta.shortName;
+      const result = d?.quoteResponse?.result?.[0];
+      if (result?.longName) return result.longName;
+      if (result?.shortName) return result.shortName;
     }
   } catch(e) {}
-  // Fallback: Finnhub search (US only)
-  if (market === 'US' && state.apiKey) {
-    try {
-      const r = await fetchWithTimeout(
-        `https://finnhub.io/api/v1/search?q=${encodeURIComponent(ticker)}&token=${state.apiKey}`, 5000);
-      if (r.ok) {
-        const d = await r.json();
-        const exact = d.result?.find(s => s.symbol === ticker);
-        if (exact?.description) return exact.description;
-      }
-    } catch(e) {}
-  }
   return null;
 }
 
@@ -1138,6 +1253,7 @@ async function addStockToPort(pIdx) {
   // market, name, currency all auto-detected
   const selectedMarket = 'US'; // default, overridden below
   const costCurrency = null;   // auto-detected from API
+  let secType = 'stock'; // 'stock' or 'fund'
 
   if (!rawTicker || !qty || isNaN(cost)) {
     showNotif('יש למלא סימול, כמות ועלות (עלות 0 תקינה ל-RSU)');
@@ -1165,10 +1281,13 @@ async function addStockToPort(pIdx) {
   } else if (rawTicker.endsWith('.L')) {
     market = 'UK';
   } else if (/^\d+$/.test(rawTicker)) {
-    // Pure number = Israeli stock (TASE uses numeric codes)
     ticker = rawTicker + '.TA';
     market = 'IL';
-    setStatus('✓ מנייה ישראלית (TASE)', '#1D9E75');
+    if (/^\d{7}$/.test(rawTicker)) {
+      setStatus('✓ קרן נאמנות ישראלית', '#1D9E75');
+    } else {
+      setStatus('✓ נייר ישראלי (TASE)', '#1D9E75');
+    }
     await new Promise(r => setTimeout(r, 300));
   } else if (!rawTicker.includes('.')) {
     setStatus('⏳ בודק TASE...', '#888');
@@ -1191,7 +1310,7 @@ async function addStockToPort(pIdx) {
   setStatus('⏳ שולף מחיר ומטבע...', '#888');
   const priceData = await fetchREST(ticker, market);
   if (priceData) {
-    state.prices[ticker] = { price: priceData.price, prev: priceData.prev || priceData.price, currency: priceData.currency, t: Date.now() };
+    state.prices[ticker] = { price: priceData.price, prev: priceData.prev || priceData.price, currency: priceData.currency, name: priceData.name || null, t: Date.now() };
     // Auto-set cost currency from what API returns
     const apiCur = priceData.currency;
     if (apiCur === 'ILA') autoCostCurrency = 'ILA';       // agorot
@@ -1220,7 +1339,8 @@ async function addStockToPort(pIdx) {
   setStatus('✓ מוסיף לתיק...', '#1D9E75');
   await new Promise(r => setTimeout(r, 200));
 
-  state.portfolios[pIdx].stocks.push({ ticker, name: autoName || ticker, qty, cost, market, costCurrency: autoCostCurrency });
+  const isML = /^\d{7}/.test(ticker.replace('.TA',''));
+  state.portfolios[pIdx].stocks.push({ ticker, name: autoName || ticker, qty, cost, market, costCurrency: autoCostCurrency, isMutualFund: isML });
   saveState();
   formOpen = false;
   if (form) form.style.opacity = '1';
