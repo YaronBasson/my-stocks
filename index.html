@@ -327,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v4.6</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v4.7</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -474,7 +474,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v4.6</div>
+          <div class="lbl">Stock Portfolio Tracker v4.7</div>
         </div>
       </div>
     </div>
@@ -741,20 +741,15 @@ function toILS(price, currency, market) {
 // User always enters cost in the native currency of the market:
 // IL -> ILS (shekels), US -> USD (dollars), UK -> GBp (pence)
 function costToILS(costPerShare, market, costCurrency) {
-  // User ALWAYS enters cost in human-readable units:
-  //   IL market -> shekels (ILS), e.g. 42.50
-  //   US market -> dollars (USD), e.g. 175.00
-  //   UK market -> depends on costCurrency set by user (default GBp pence)
   const cur = costCurrency || null;
-  // Explicit currency overrides market
   if (cur === 'ILS' || cur === 'IL') return costPerShare;
+  if (cur === 'ILA') return costPerShare / 100;
   if (cur === 'USD' || cur === 'US') return costPerShare * state.fx.usdils;
   if (cur === 'GBP') return costPerShare * state.fx.gbpils;
-  if (cur === 'GBp') return costPerShare * state.fx.gbpils / 100;
-  // No explicit currency -- infer from market
-  if (market === 'IL') return costPerShare; // user enters ILS (shekels)
+  if (cur === 'GBp' || cur === 'GBX') return costPerShare * state.fx.gbpils / 100;
+  if (market === 'IL') return costPerShare;
   if (market === 'US') return costPerShare * state.fx.usdils;
-  if (market === 'UK') return costPerShare * state.fx.gbpils / 100; // GBp pence
+  if (market === 'UK') return costPerShare * state.fx.gbpils / 100;
   return costPerShare;
 }
 
@@ -859,25 +854,14 @@ function renderPortfolioView() {
   let addFormHTML = '';
   if (state.editMode) {
     addFormHTML = `<div class="add-form">
+      <input type="text" id="ns-ticker" placeholder="טיקר: AAPL / TEVA / 5138342 / BP.L"
+        style="direction:ltr;text-transform:uppercase;font-size:14px;font-weight:500;"
+        onfocus="formOpen=true" onblur="formOpen=true">
       <div class="row">
-        <input type="text" id="ns-ticker" placeholder="סימול: AAPL / TEVA.TA / BP.L" style="direction:ltr;text-transform:uppercase;flex:2;" onfocus="formOpen=true" onblur="formOpen=true">
-        <select id="ns-market" onfocus="formOpen=true" style="flex:1;">
-          <option value="US">US ארה"ב</option>
-          <option value="IL">IL ישראל</option>
-          <option value="UK">UK לונדון</option>
-        </select>
-      </div>
-      <input type="text" id="ns-name" placeholder="שם החברה (אוטומטי אם ריק)" onfocus="formOpen=true" onblur="formOpen=true">
-      <div class="row">
-        <input type="number" id="ns-qty" placeholder="כמות" style="flex:1;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
-        <input type="number" id="ns-cost" placeholder="עלות (IL=אגורות, US=$, UK=GBp)" style="flex:2;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
-        <select id="ns-cost-currency" onfocus="formOpen=true" style="flex:1;">
-          <option value="">אוטו</option>
-          <option value="USD">$</option>
-          <option value="ILS">₪</option>
-          <option value="GBp">GBp</option>
-          <option value="GBP">£</option>
-        </select>
+        <input type="number" id="ns-qty" placeholder="כמות"
+          style="flex:1;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
+        <input type="number" id="ns-cost" placeholder="עלות (במטבע הבורסה)"
+          style="flex:2;direction:ltr;" onfocus="formOpen=true" onblur="formOpen=true">
       </div>
       <button class="btn-primary" onclick="addStockToPort(${state.currentPort})">+ הוסף מנייה</button>
     </div>`;
@@ -1149,11 +1133,11 @@ async function autoDetectName(ticker, market) {
 
 async function addStockToPort(pIdx) {
   const rawTicker = document.getElementById('ns-ticker')?.value.trim().toUpperCase();
-  const nameInput = document.getElementById('ns-name')?.value.trim();
   const qty = parseFloat(document.getElementById('ns-qty')?.value);
   const cost = parseFloat(document.getElementById('ns-cost')?.value);
-  const selectedMarket = document.getElementById('ns-market')?.value;
-  const costCurrency = document.getElementById('ns-cost-currency')?.value || null;
+  // market, name, currency all auto-detected
+  const selectedMarket = 'US'; // default, overridden below
+  const costCurrency = null;   // auto-detected from API
 
   if (!rawTicker || !qty || isNaN(cost)) {
     showNotif('יש למלא סימול, כמות ועלות (עלות 0 תקינה ל-RSU)');
@@ -1201,31 +1185,36 @@ async function addStockToPort(pIdx) {
     }
   }
 
-  let autoName = nameInput;
-  let autoCostCurrency = costCurrency || null;
+  let autoName = null;
+  let autoCostCurrency = null;
 
-  setStatus('⏳ שולף מחיר...', '#888');
+  setStatus('⏳ שולף מחיר ומטבע...', '#888');
   const priceData = await fetchREST(ticker, market);
   if (priceData) {
     state.prices[ticker] = { price: priceData.price, prev: priceData.prev || priceData.price, currency: priceData.currency, t: Date.now() };
-    if (market === 'UK' && priceData.currency === 'USD' && !costCurrency) {
-      autoCostCurrency = 'USD';
-    }
-    const priceDisplay = priceData.price.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
-    setStatus(`✓ מחיר: ${priceDisplay}`, '#1D9E75');
+    // Auto-set cost currency from what API returns
+    const apiCur = priceData.currency;
+    if (apiCur === 'ILA') autoCostCurrency = 'ILA';       // agorot
+    else if (apiCur === 'ILS') autoCostCurrency = 'ILS';   // shekels
+    else if (apiCur === 'USD') autoCostCurrency = 'USD';
+    else if (apiCur === 'GBp' || apiCur === 'GBX') autoCostCurrency = 'GBp';
+    else if (apiCur === 'GBP') autoCostCurrency = 'GBP';
+    else autoCostCurrency = apiCur;
+    const priceDisplay = (apiCur === 'ILA' ? priceData.price / 100 : priceData.price)
+      .toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+    const curLabel = apiCur === 'ILA' ? '₪' : apiCur === 'USD' ? '$' : apiCur === 'GBp' ? 'p' : apiCur || '';
+    setStatus(`✓ מחיר: ${curLabel}${priceDisplay}`, '#1D9E75');
     await new Promise(r => setTimeout(r, 400));
   } else {
     setStatus('⚠ מחיר לא נמצא', '#f0a500');
     await new Promise(r => setTimeout(r, 400));
   }
 
-  if (!autoName) {
-    setStatus('⏳ מחפש שם חברה...', '#888');
-    autoName = await autoDetectName(ticker, market);
-    if (autoName) {
-      setStatus(`✓ ${autoName.slice(0,20)}`, '#1D9E75');
-      await new Promise(r => setTimeout(r, 300));
-    }
+  setStatus('⏳ מחפש שם חברה...', '#888');
+  autoName = await autoDetectName(ticker, market);
+  if (autoName) {
+    setStatus(`✓ ${autoName.slice(0,20)}`, '#1D9E75');
+    await new Promise(r => setTimeout(r, 300));
   }
 
   setStatus('✓ מוסיף לתיק...', '#1D9E75');
