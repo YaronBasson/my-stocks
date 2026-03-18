@@ -320,7 +320,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v3.5</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v3.6</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -459,7 +459,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v3.5</div>
+          <div class="lbl">Stock Portfolio Tracker v3.6</div>
         </div>
       </div>
     </div>
@@ -727,16 +727,20 @@ function toILS(price, currency, market) {
 // User always enters cost in the native currency of the market:
 // IL -> ILS (shekels), US -> USD (dollars), UK -> GBp (pence)
 function costToILS(costPerShare, market, costCurrency) {
+  // User ALWAYS enters cost in human-readable units:
+  //   IL market -> shekels (ILS), e.g. 42.50
+  //   US market -> dollars (USD), e.g. 175.00
+  //   UK market -> depends on costCurrency set by user (default GBp pence)
   const cur = costCurrency || null;
-  if (cur === 'ILS') return costPerShare;         // explicit shekels
-  if (cur === 'ILA') return costPerShare / 100;   // explicit agorot
+  // Explicit currency overrides market
+  if (cur === 'ILS' || cur === 'IL') return costPerShare;
   if (cur === 'USD' || cur === 'US') return costPerShare * state.fx.usdils;
   if (cur === 'GBP') return costPerShare * state.fx.gbpils;
   if (cur === 'GBp') return costPerShare * state.fx.gbpils / 100;
   // No explicit currency -- infer from market
-  if (market === 'IL') return costPerShare / 100; // IL: user enters agorot
+  if (market === 'IL') return costPerShare; // user enters ILS (shekels)
   if (market === 'US') return costPerShare * state.fx.usdils;
-  if (market === 'UK') return costPerShare * state.fx.gbpils / 100; // GBp default
+  if (market === 'UK') return costPerShare * state.fx.gbpils / 100; // GBp pence
   return costPerShare;
 }
 
@@ -777,6 +781,7 @@ function computePortfolio(p) {
       const val = toILS(price * s.qty, cur, s.market);
       const prevVal = toILS((prev || price) * s.qty, cur, s.market);
       const cost = costToILS(s.cost, s.market, s.costCurrency) * s.qty;
+      if (isNaN(cost) || cost < 0) console.warn('Bad cost for', s.ticker, {cost: s.cost, market: s.market, costCurrency: s.costCurrency, computed: cost});
       s._valILS = val;
       s._valUSD = val / state.fx.usdils;
       s._costILS = cost;
