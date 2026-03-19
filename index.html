@@ -327,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v5.5</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v6.2</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -433,7 +433,29 @@ body { display: flex; flex-direction: column; }
           <div class="lbl">לנתוני מניות ארה״ב בזמן אמת</div>
         </div>
         <input type="text" class="api-input" id="api-key-input" placeholder="הדבק את ה-API key שלך">
-        <button class="btn-primary" onclick="saveApiKey()" style="width:100%;">שמור</button>
+      </div>
+      <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+        <div>
+          <div style="font-size:14px; font-weight:500;">EODHD API Key</div>
+          <div class="lbl">לקרנות נאמנות ישראליות — 20 קריאות/יום בחינם</div>
+        </div>
+        <input type="text" class="api-input" id="eohd-key-input" placeholder="הדבק את ה-EODHD key שלך" style="direction:ltr;">
+        <div style="display:flex; gap:8px; align-items:center; width:100%;">
+          <span id="eohd-counter" style="font-size:11px; color:var(--text3);">0/20 קריאות היום</span>
+          <button class="btn-sm" onclick="forceRefreshAllEOHD()" style="margin-right:auto; padding:6px 10px;">🔄 רענן קרנות</button>
+        </div>
+      </div>
+      <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+        <div>
+          <div style="font-size:14px; font-weight:500;">Twelve Data API Key</div>
+          <div class="lbl">לכל הבורסות — 800 קרדיטים/יום בחינם</div>
+        </div>
+        <input type="text" class="api-input" id="td-key-input" placeholder="הדבק את ה-Twelve Data key שלך" style="direction:ltr;">
+        <div style="display:flex; gap:8px; align-items:center; width:100%;">
+          <span id="td-counter" style="font-size:11px; color:var(--text3);">0/800 קרדיטים היום</span>
+          <button class="btn-sm" onclick="forceRefreshAllTD()" style="margin-right:auto; padding:6px 10px;">🔄 רענן (TD)</button>
+        </div>
+        <button class="btn-primary" onclick="saveApiKey()" style="width:100%;">שמור הכל</button>
       </div>
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
@@ -474,7 +496,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v5.5</div>
+          <div class="lbl">Stock Portfolio Tracker v6.2</div>
         </div>
       </div>
     </div>
@@ -493,23 +515,19 @@ body { display: flex; flex-direction: column; }
     התראות
   </div>
   <div class="nav-item" id="nav-summary" onclick="switchTab('summary')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-    סיכום
-  </div>
-  <div class="nav-item" id="nav-settings" onclick="switchTab('settings')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 5.58 7.58"/></svg>
-    הגדרות
-  </div>
-</div>
-
-<div class="notif-banner" id="notif-banner"></div>
-
-<script>
-const STORAGE_KEY = 'portfolioApp_v2';
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line xconst STORAGE_KEY = 'portfolioApp_v2';
 const DEFAULT_API_KEY = '';
 
 let state = {
   apiKey: DEFAULT_API_KEY,
+  eohdKey: '',          // eodhd.com API key (20 calls/day free)
+  eohdCallsToday: 0,    // counter for today
+  eohdCallsDate: '',    // date string for reset
+  eohdLastFetch: {},    // { ticker: timestamp } — throttle per ticker (2hr)
+  tdKey: '',            // twelvedata.com API key (800 credits/day free)
+  tdCallsToday: 0,      // counter for today
+  tdCallsDate: '',      // date string for reset
+  tdLastFetch: {},      // { ticker: timestamp } — throttle per ticker (2hr)
   portfolios: [
     { id:1, name:'תיק 1 — ישראלי', color:'#00d4a0', expanded:true, stocks:[
       { ticker:'TEVA.TA', name:'טבע', qty:100, cost:42.50, market:'IL' },
@@ -554,6 +572,14 @@ function loadState() {
       state.portfolios = parsed.portfolios || state.portfolios;
       state.alerts = parsed.alerts || [];
       state.apiKey = parsed.apiKey || '';
+      state.eohdKey = parsed.eohdKey || '';
+      state.eohdCallsToday = parsed.eohdCallsToday || 0;
+      state.eohdCallsDate = parsed.eohdCallsDate || '';
+      state.eohdLastFetch = parsed.eohdLastFetch || {};
+      state.tdKey = parsed.tdKey || '';
+      state.tdCallsToday = parsed.tdCallsToday || 0;
+      state.tdCallsDate = parsed.tdCallsDate || '';
+      state.tdLastFetch = parsed.tdLastFetch || {};
     }
   } catch(e) {}
 }
@@ -720,6 +746,249 @@ async function fetchYahoo(ticker) {
   return null;
 }
 
+async function fetchTwelveData(ticker, force = false) {
+  if (!state.tdKey) return null;
+
+  // Smart skip: market closed + fresh price already cached
+  if (!force) {
+    const markets = openMarkets();
+    if (!markets.IL) {
+      const cached = state.prices[ticker];
+      if (cached?.price > 0 && cached?.t) {
+        const now = new Date();
+        const ilDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
+        const day = ilDate.getDay();
+        const closeHour = (day === 5) ? 14 : 17;
+        const closeMins = (day === 5) ? 20 : 25;
+        const closeToday = new Date(ilDate);
+        closeToday.setHours(closeHour, closeMins, 0, 0);
+        if (cached.t > closeToday.getTime()) return null;
+      }
+    }
+  }
+
+  // Reset daily counter if new day
+  const today = new Date().toISOString().slice(0, 10);
+  if (state.tdCallsDate !== today) {
+    state.tdCallsToday = 0;
+    state.tdCallsDate = today;
+  }
+  if (state.tdCallsToday >= 790) { // leave buffer of 10
+    showNotif('⚠ Twelve Data: הגעת למכסה היומית (790/800)');
+    return null;
+  }
+
+  // 2-hour throttle per ticker (skip if force)
+  if (!force) {
+    const lastFetch = state.tdLastFetch?.[ticker] || 0;
+    if (Date.now() - lastFetch < 2 * 60 * 60 * 1000) return null;
+  }
+
+  // Twelve Data symbol format:
+  // 5138342.TA → symbol=5138342&exchange=TASE
+  // TEVA.TA → symbol=TEVA&exchange=TASE
+  // SPYL.L → symbol=SPYL&exchange=LSE
+  // VOO → symbol=VOO&exchange=NYSE (or just VOO)
+  let sym, exchange = '';
+  if (ticker.endsWith('.TA')) {
+    sym = ticker.replace('.TA', '');
+    exchange = '&exchange=TASE';
+  } else if (ticker.endsWith('.L')) {
+    sym = ticker.replace('.L', '');
+    exchange = '&exchange=LSE';
+  } else {
+    sym = ticker.replace('.US', '');
+  }
+
+  // Use /quote endpoint — returns close, previous_close, change, percent_change
+  const quoteUrl = `https://api.twelvedata.com/quote?symbol=${encodeURIComponent(sym)}${exchange}&apikey=${state.tdKey}`;
+  // Fallback: /price endpoint (1 credit, just latest price)
+  const priceUrl = `https://api.twelvedata.com/price?symbol=${encodeURIComponent(sym)}${exchange}&apikey=${state.tdKey}`;
+
+  for (const apiUrl of [quoteUrl, priceUrl]) {
+    const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+    try {
+      const r = await fetchWithTimeout(proxy, 8000);
+      if (!r.ok) continue;
+      const d = await r.json();
+      if (!d || d.status === 'error' || d.code) continue;
+
+      let price, prev;
+
+      if (d.close || d.previous_close) {
+        // /quote response
+        price = parseFloat(d.close || d.price || 0);
+        prev  = parseFloat(d.previous_close || price);
+      } else if (d.price) {
+        // /price response — only latest price, no prev
+        price = parseFloat(d.price);
+        prev  = price;
+      }
+
+      if (!price || price <= 0) continue;
+
+      // Success
+      state.tdCallsToday++;
+      if (!state.tdLastFetch) state.tdLastFetch = {};
+      state.tdLastFetch[ticker] = Date.now();
+      saveState();
+      renderTDCounter();
+
+      const change = price - prev;
+      const changePct = prev > 0 ? (change / prev * 100) : 0;
+      return {
+        price, prev, change, changePct,
+        currency: 'ILA',
+        name: d.name || null,
+        isMutualFund: true
+      };
+    } catch(e) { continue; }
+  }
+  return null;
+}
+
+function renderTDCounter() {
+  const el = document.getElementById('td-counter');
+  if (!el) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const calls = state.tdCallsDate === today ? state.tdCallsToday : 0;
+  el.textContent = `${calls}/800 קרדיטים היום`;
+  el.style.color = calls >= 750 ? 'var(--red)' : calls >= 600 ? 'var(--gold)' : 'var(--text3)';
+}
+
+async function forceRefreshAllTD() {
+  if (!state.tdKey) { showNotif('הכנס Twelve Data key בהגדרות'); return; }
+  state.tdLastFetch = {};
+  showNotif('🔄 מרענן הכל מ-Twelve Data...');
+  await fetchAllPrices();
+  renderAll();
+}
+
+async function fetchEODHD(ticker, force = false) {
+  if (!state.eohdKey) return null;
+
+  // Smart skip: TASE closed + already have post-close price → don't waste a call
+  if (!force) {
+    const markets = openMarkets();
+    if (!markets.IL) {
+      const cached = state.prices[ticker];
+      if (cached?.price > 0 && cached?.t) {
+        const now = new Date();
+        const ilDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
+        const day = ilDate.getDay();
+        const closeHour = (day === 5) ? 14 : 17;
+        const closeMins = (day === 5) ? 20 : 25;
+        const closeToday = new Date(ilDate);
+        closeToday.setHours(closeHour, closeMins, 0, 0);
+        if (cached.t > closeToday.getTime()) return null;
+      }
+    }
+  }
+
+  // Reset daily counter if new day
+  const today = new Date().toISOString().slice(0, 10);
+  if (state.eohdCallsDate !== today) {
+    state.eohdCallsToday = 0;
+    state.eohdCallsDate = today;
+  }
+  if (state.eohdCallsToday >= 18) {
+    showNotif('⚠ EODHD: הגעת למכסה היומית (18/20)');
+    return null;
+  }
+
+  // 2-hour throttle per ticker (skip if force)
+  if (!force) {
+    const lastFetch = state.eohdLastFetch?.[ticker] || 0;
+    if (Date.now() - lastFetch < 2 * 60 * 60 * 1000) return null;
+  }
+
+  // Build EODHD symbol: 5138342 → 5138342.TA, TEVA.TA → TEVA.TA, SPYL.L → SPYL.LSE
+  const clean = ticker.replace('.TA', '').replace('.L', '');
+  let sym;
+  if (ticker.endsWith('.TA') || /^\d+$/.test(ticker)) {
+    sym = clean + '.TA';   // TASE: 5138342.TA or TEVA.TA
+  } else if (ticker.endsWith('.L')) {
+    sym = clean + '.LSE';  // LSE: SPYL.LSE
+  } else {
+    sym = clean + '.US';   // US: VOO.US
+  }
+
+  // Try real-time endpoint first (live price, counts as 1 call)
+  const rtUrl  = `https://eodhd.com/api/real-time/${encodeURIComponent(sym)}?api_token=${state.eohdKey}&fmt=json`;
+  // Fallback: EOD endpoint (last close)
+  const eodUrl = `https://eodhd.com/api/eod/${encodeURIComponent(sym)}?api_token=${state.eohdKey}&period=d&order=d&limit=2&fmt=json`;
+
+  for (const apiUrl of [rtUrl, eodUrl]) {
+    const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+    try {
+      const r = await fetchWithTimeout(proxy, 8000);
+      if (!r.ok) continue;
+      const d = await r.json();
+      if (!d) continue;
+
+      let price, prev;
+
+      // real-time response: { close, previousClose, open, ... }
+      if (!Array.isArray(d)) {
+        price = parseFloat(d.close || d.adjusted_close || 0);
+        prev  = parseFloat(d.previousClose || d.open || price);
+      } else if (d.length >= 1) {
+        // EOD array: [{ date, close, open, ... }, ...]
+        price = parseFloat(d[0].adjusted_close || d[0].close || 0);
+        prev  = parseFloat(d[1]?.adjusted_close || d[1]?.close || d[0].open || price);
+      }
+
+      if (!price || price <= 0) continue;
+
+      // Success — increment counter
+      state.eohdCallsToday++;
+      if (!state.eohdLastFetch) state.eohdLastFetch = {};
+      state.eohdLastFetch[ticker] = Date.now();
+      saveState();
+      renderEOHDCounter();
+
+      return {
+        price, prev,
+        change: price - prev,
+        changePct: prev > 0 ? ((price - prev) / prev * 100) : 0,
+        currency: 'ILA',
+        name: null,
+        isMutualFund: true
+      };
+    } catch(e) { continue; }
+  }
+  return null;
+}
+
+function renderEOHDCounter() {
+  const el = document.getElementById('eohd-counter');
+  if (!el) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const calls = state.eohdCallsDate === today ? state.eohdCallsToday : 0;
+  el.textContent = `${calls}/20 קריאות היום`;
+  el.style.color = calls >= 18 ? 'var(--red)' : calls >= 12 ? 'var(--gold)' : 'var(--text3)';
+}
+
+async function forceRefreshEOHD(ticker) {
+  if (!state.eohdKey) { showNotif('הכנס EODHD key בהגדרות'); return; }
+  if (!state.eohdLastFetch) state.eohdLastFetch = {};
+  state.eohdLastFetch[ticker] = 0;
+  // Temporarily mark as force for this fetch
+  state._eohdForce = true;
+  showNotif('🔄 מרענן מ-EODHD...');
+  await fetchAllPrices();
+  state._eohdForce = false;
+  renderAll();
+}
+
+async function forceRefreshAllEOHD() {
+  if (!state.eohdKey) { showNotif('הכנס EODHD key בהגדרות'); return; }
+  state.eohdLastFetch = {}; // reset all throttles
+  showNotif('🔄 מרענן הכל מ-EODHD (force)...');
+  await fetchAllPrices();
+  renderAll();
+}
+
 async function fetchMayaFund(fundId) {
   const cleanId = fundId.replace('.TA', '');
 
@@ -801,6 +1070,14 @@ async function fetchMayaFund(fundId) {
     };
   }
 
+  // --- Fallback: Twelve Data (800 credits/day) ---
+  const td = await fetchTwelveData(fundId, state._eohdForce || false);
+  if (td) return td;
+
+  // --- Final fallback: EODHD (20 calls/day) ---
+  const eohd = await fetchEODHD(fundId, state._eohdForce || false);
+  if (eohd) return eohd;
+
   return null;
 }
 
@@ -876,7 +1153,7 @@ function costToILS(costPerShare, market, costCurrency) {
   if (cur === 'USD' || cur === 'US') return costPerShare * state.fx.usdils;
   if (cur === 'GBP') return costPerShare * state.fx.gbpils;
   if (cur === 'GBp' || cur === 'GBX') return costPerShare * state.fx.gbpils / 100;
-  if (market === 'IL') return costPerShare;
+  if (market === 'IL') return costPerShare / 100;  // IL always in agorot
   if (market === 'US') return costPerShare * state.fx.usdils;
   if (market === 'UK') return costPerShare * state.fx.gbpils / 100;
   return costPerShare;
@@ -928,7 +1205,7 @@ function computePortfolio(p) {
       s._dayPct = prevVal > 0 ? ((val - prevVal) / prevVal * 100) : 0;
       s._price = price;
       s._prev = prev;
-      s._apiCurrency = cur || (s.market === 'IL' ? 'ILS' : s.market === 'US' ? 'USD' : 'GBp');
+      s._apiCurrency = cur || (s.market === 'IL' ? 'ILA' : s.market === 'US' ? 'USD' : 'GBp');
       totalILS += val; costILS += cost; dayILS += val - prevVal;
     } else {
       const est = costToILS(s.cost, s.market, s.costCurrency) * s.qty;
@@ -1036,7 +1313,7 @@ function renderPortfolioView() {
         ? (s._price - s._prev) / 100
         : (s._price - s._prev))
     : 0;
-      const priceCurSymbol = s._apiCurrency === 'GBp' ? 'p' : s._apiCurrency === 'GBP' ? '£' : s._apiCurrency === 'ILS' ? '₪' : '$';
+      const priceCurSymbol = (s._apiCurrency === 'ILA' || s._apiCurrency === 'ILS' || s.market === 'IL') ? '₪' : s._apiCurrency === 'GBp' ? 'p' : s._apiCurrency === 'GBP' ? '£' : '$';
 
       const valILS = s._valILS || s._costILS || 0;
       const valUSD = valILS / state.fx.usdils;
@@ -1051,7 +1328,7 @@ function renderPortfolioView() {
 
       const dayColor = dayILS >= 0 ? 'var(--green)' : 'var(--red)';
       const gainColor = gainILS >= 0 ? 'var(--green)' : 'var(--red)';
-      const costCurSymbol = s.costCurrency === 'ILS' ? '₪' : s.costCurrency === 'GBp' ? 'p' : s.costCurrency === 'GBP' ? '£' : '$';
+      const costCurSymbol = (s.costCurrency === 'ILS' || s.costCurrency === 'ILA') ? '₪' : s.costCurrency === 'GBp' ? 'p' : s.costCurrency === 'GBP' ? '£' : s.market === 'IL' ? '₪' : '$';
 
       const editBtns = state.editMode
         ? `<div style="display:flex;gap:3px;margin-top:4px;">
@@ -1071,7 +1348,7 @@ function renderPortfolioView() {
               ${hasPrice ? `<span style="font-family:var(--mono);font-size:10px;color:${priceChangeRaw >= 0 ? 'var(--green)' : 'var(--red)'};" dir="ltr">${priceChangeRaw >= 0 ? '+' : ''}${priceChangeRaw.toFixed(2)}</span>` : ''}
             </div>
             <div style="font-size:10px;color:var(--text3);margin-top:1px;">${s.name}</div>
-            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);">${s.qty.toLocaleString()} × ${costCurSymbol}${s.cost > 0 ? s.cost.toFixed(2) : 'RSU'}</div>
+            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);">${s.qty.toLocaleString()} × ${costCurSymbol}${s.cost > 0 ? (s.costCurrency === 'ILA' ? (s.cost/100).toFixed(2) : s.cost.toFixed(2)) : 'RSU'}</div>
             ${editBtns}
           </div>
 
@@ -1198,6 +1475,12 @@ function switchTab(tab) {
   if (tab === 'summary') renderSummary();
   if (tab === 'settings') {
     document.getElementById('api-key-input').value = state.apiKey || '';
+    const eohdInput = document.getElementById('eohd-key-input');
+    if (eohdInput) eohdInput.value = state.eohdKey || '';
+    renderEOHDCounter();
+    const tdInput = document.getElementById('td-key-input');
+    if (tdInput) tdInput.value = state.tdKey || '';
+    renderTDCounter();
   }
 }
 
@@ -1532,9 +1815,15 @@ function checkAlerts() {
 function saveApiKey() {
   const key = document.getElementById('api-key-input').value.trim();
   state.apiKey = key;
+  const eohdKey = document.getElementById('eohd-key-input')?.value.trim();
+  if (eohdKey !== undefined) state.eohdKey = eohdKey;
+  const tdKey = document.getElementById('td-key-input')?.value.trim();
+  if (tdKey !== undefined) state.tdKey = tdKey;
   saveState();
-  showNotif('API key נשמר!');
+  showNotif('API keys נשמרו!');
   renderApiKeyIndicator();
+  renderEOHDCounter();
+  renderTDCounter();
   connectWS();
   fetchAllPrices().then(() => renderAll());
 }
@@ -1612,6 +1901,12 @@ function importData(event) {
       state.currentPort = 0;
       saveState();
       document.getElementById('api-key-input').value = state.apiKey || '';
+    const eohdInput = document.getElementById('eohd-key-input');
+    if (eohdInput) eohdInput.value = state.eohdKey || '';
+    renderEOHDCounter();
+    const tdInput = document.getElementById('td-key-input');
+    if (tdInput) tdInput.value = state.tdKey || '';
+    renderTDCounter();
       const status = document.getElementById('backup-status');
       status.style.color = 'var(--green)';
       status.textContent = `✓ יובאו ${backup.portfolios.length} תיקים (גובה: ${backup.exportedAt?.slice(0,10) || 'לא ידוע'})`;
@@ -1800,6 +2095,55 @@ document.querySelector('.topbar-right').insertAdjacentHTML('afterbegin',
 loadState();
 loadLastPrices();
 document.getElementById('api-key-input').value = state.apiKey || '';
+    const eohdInput = document.getElementById('eohd-key-input');
+    if (eohdInput) eohdInput.value = state.eohdKey || '';
+    renderEOHDCounter();
+    const tdInput = document.getElementById('td-key-input');
+    if (tdInput) tdInput.value = state.tdKey || '';
+    renderTDCounter();
+renderAll(); // render immediately — no loading screen
+renderMarketStatus();
+renderApiKeyIndicator();
+
+fetchFX().then(() => {
+  smartRefresh();
+  smartConnectWS();
+}).catch(() => {
+  renderRateBar();
+  renderAll();
+});
+
+// If no API key — show hint
+if (!state.apiKey) {
+  setTimeout(() => showNotif('הכנס Finnhub API key בהגדרות ⚙'), 800);
+}
+derApiKeyIndicator();
+
+fetchFX().then(() => {
+  smartRefresh();
+  smartConnectWS();
+}).catch(() => {
+  renderRateBar();
+  renderAll();
+});
+
+// If no API key — show hint
+if (!state.apiKey) {
+  setTimeout(() => showNotif('הכנס Finnhub API key בהגדרות ⚙'), 800);
+}
+gleEdit()" title="עריכה">✎</div>`
+);
+
+// Init
+loadState();
+loadLastPrices();
+document.getElementById('api-key-input').value = state.apiKey || '';
+    const eohdInput = document.getElementById('eohd-key-input');
+    if (eohdInput) eohdInput.value = state.eohdKey || '';
+    renderEOHDCounter();
+    const tdInput = document.getElementById('td-key-input');
+    if (tdInput) tdInput.value = state.tdKey || '';
+    renderTDCounter();
 renderAll(); // render immediately — no loading screen
 renderMarketStatus();
 renderApiKeyIndicator();
