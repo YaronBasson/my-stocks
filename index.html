@@ -327,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v6.7</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v7.0</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -496,7 +496,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v6.7</div>
+          <div class="lbl">Stock Portfolio Tracker v7.0</div>
         </div>
       </div>
     </div>
@@ -1383,21 +1383,21 @@ function renderPortfolioView() {
               ${hasPrice ? `<span style="font-family:var(--mono);font-size:10px;color:${priceChangeRaw >= 0 ? 'var(--green)' : 'var(--red)'};" dir="ltr">${priceChangeRaw >= 0 ? '+' : ''}${priceChangeRaw.toFixed(2)}</span>` : ''}
             </div>
             <div style="font-size:10px;color:var(--text3);margin-top:1px;">${s.name}</div>
-            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);">${s.qty.toLocaleString()} × ${costCurSymbol}${s.cost > 0 ? (s.costCurrency === 'ILA' ? (s.cost/100).toFixed(2) : s.cost.toFixed(2)) : 'RSU'}</div>
+            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);">${s.costCurrency === 'ILA' ? s.cost.toFixed(2) + ' אג\'' : (s.cost > 0 ? costCurSymbol + s.cost.toFixed(2) : 'RSU')} × ${s.qty.toLocaleString()}</div>
             ${editBtns}
           </div>
 
           <!-- COL 2: purchase cost -->
           <div style="text-align:left;">
             <div style="font-size:9px;color:var(--text3);">עלות</div>
-            <div style="font-family:var(--mono);font-size:11px;font-weight:500;">${fmtILS(costILS)}</div>
+            <div style="font-family:var(--mono);font-size:11px;font-weight:500;">${fmtILS(costILS)} <span style="font-size:9px;color:var(--text3);">ש"ח</span></div>
             <div style="font-family:var(--mono);font-size:10px;color:var(--text2);">${fmtUSD(costUSD)}</div>
           </div>
 
           <!-- COL 3: daily change -->
           <div style="text-align:left;">
             <div style="font-size:9px;color:var(--text3);">יומי</div>
-            <div style="font-family:var(--mono);font-size:11px;font-weight:500;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${fmtILS(dayILS)}</div>
+            <div style="font-family:var(--mono);font-size:11px;font-weight:500;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${fmtILS(dayILS)} <span style="font-size:9px;opacity:0.7;">ש"ח</span></div>
             <div style="font-family:var(--mono);font-size:10px;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${fmtUSD(Math.abs(dayUSD))}</div>
             <div style="font-family:var(--mono);font-size:10px;color:${dayColor};">${dayILS >= 0 ? '+' : ''}${dayPct.toFixed(2)}%</div>
           </div>
@@ -1405,7 +1405,7 @@ function renderPortfolioView() {
           <!-- COL 4: total value (BIG) + gain -->
           <div style="text-align:left;">
             <div style="font-size:9px;color:var(--text3);">שווי</div>
-            <div style="font-family:var(--mono);font-size:13px;font-weight:700;">${fmtILS(valILS)}</div>
+            <div style="font-family:var(--mono);font-size:13px;font-weight:700;">${fmtILS(valILS)} <span style="font-size:9px;font-weight:400;color:var(--text3);">ש"ח</span></div>
             <div style="font-family:var(--mono);font-size:10px;color:var(--text2);">${fmtUSD(valUSD)}</div>
             <div style="font-family:var(--mono);font-size:10px;color:${gainColor};">${gainILS >= 0 ? '+' : ''}${fmtILS(gainILS)} (${gainILS >= 0 ? '+' : ''}${gainPct.toFixed(1)}%)</div>
             <div style="font-family:var(--mono);font-size:10px;color:${gainColor};">${gainILS >= 0 ? '+' : ''}${fmtUSD(Math.abs(gainUSD))}</div>
@@ -1746,6 +1746,15 @@ function editStock(pIdx, sIdx) {
           style="flex:2;background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--text);direction:ltr;"
           onfocus="formOpen=true" onblur="formOpen=true">
       </div>
+      ${s.secType === 'fund' ? `
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">
+        <input id="edit-manual-price-${sIdx}" type="number" step="0.01"
+          placeholder="מחיר ידני באגורות (אג\')"
+          value="${state.prices[s.ticker]?.price && state.prices[s.ticker]?.currency !== 'ILA' ? parseFloat(state.prices[s.ticker].price).toFixed(2) : ''}"
+          style="flex:1;background:var(--bg3);border:0.5px solid var(--gold);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--text);direction:ltr;"
+          onfocus="formOpen=true" onblur="formOpen=true">
+        <span style="font-size:10px;color:var(--gold);">₪ שקלים</span>
+      </div>` : ''}
       <div style="display:flex;gap:6px;">
         <button onclick="saveEditStock(${pIdx},${sIdx})"
           style="flex:2;background:var(--green);color:#fff;border:none;border-radius:6px;padding:7px;font-size:12px;font-weight:600;cursor:pointer;">שמור</button>
@@ -1768,12 +1777,34 @@ function saveEditStock(pIdx, sIdx) {
   s.cost = cost;
   s.market = market;
   s.costCurrency = costCur;
+
+  // Manual price for funds (in ILS shekels)
+  const manualPriceInput = document.getElementById(`edit-manual-price-${sIdx}`);
+  if (manualPriceInput) {
+    const manualPrice = parseFloat(manualPriceInput.value);
+    if (manualPrice > 0) {
+      if (!state.prices[s.ticker]) state.prices[s.ticker] = {};
+      // Store in agorot (ILA) — same units as TASE
+      state.prices[s.ticker].price = manualPrice;
+      state.prices[s.ticker].prev = state.prices[s.ticker].prev || manualPrice;
+      state.prices[s.ticker].currency = 'ILA';
+      state.prices[s.ticker].t = Date.now();
+      state.prices[s.ticker]._manual = true;
+      showNotif(`${s.ticker} עודכן ✓ (מחיר ידני: ${manualPrice} אג׳ = ₪${(manualPrice/100).toFixed(2)})`);
+    } else {
+      if (state.prices[s.ticker]) delete state.prices[s.ticker].price;
+      fetchAllPrices().then(() => renderAll());
+      showNotif(`${s.ticker} עודכן ✓`);
+    }
+  } else {
+    if (state.prices[s.ticker]) delete state.prices[s.ticker].price;
+    fetchAllPrices().then(() => renderAll());
+    showNotif(`${s.ticker} עודכן ✓`);
+  }
+
   saveState();
   formOpen = false;
-  if (state.prices[s.ticker]) delete state.prices[s.ticker].price;
-  fetchAllPrices().then(() => renderAll());
-  showNotif(`${s.ticker} עודכן ✓`);
-  renderPortfolioView(); // force close the edit form
+  renderPortfolioView();
 }
 
 function cancelEditStock() {
