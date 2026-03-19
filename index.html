@@ -327,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v7.0</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v7.1</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -496,7 +496,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v7.0</div>
+          <div class="lbl">Stock Portfolio Tracker v7.1</div>
         </div>
       </div>
     </div>
@@ -1363,7 +1363,7 @@ function renderPortfolioView() {
 
       const dayColor = dayILS >= 0 ? 'var(--green)' : 'var(--red)';
       const gainColor = gainILS >= 0 ? 'var(--green)' : 'var(--red)';
-      const costCurSymbol = (s.costCurrency === 'ILS' || s.costCurrency === 'ILA') ? '₪' : s.costCurrency === 'GBp' ? 'p' : s.costCurrency === 'GBP' ? '£' : s.market === 'IL' ? '₪' : '$';
+      const costCurSymbol = s.costCurrency === 'ILS' ? '₪' : s.costCurrency === 'GBp' ? 'p' : s.costCurrency === 'GBP' ? '£' : s.market === 'IL' ? '' : '$';
 
       const editBtns = state.editMode
         ? `<div style="display:flex;gap:3px;margin-top:4px;">
@@ -1383,7 +1383,7 @@ function renderPortfolioView() {
               ${hasPrice ? `<span style="font-family:var(--mono);font-size:10px;color:${priceChangeRaw >= 0 ? 'var(--green)' : 'var(--red)'};" dir="ltr">${priceChangeRaw >= 0 ? '+' : ''}${priceChangeRaw.toFixed(2)}</span>` : ''}
             </div>
             <div style="font-size:10px;color:var(--text3);margin-top:1px;">${s.name}</div>
-            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);">${s.costCurrency === 'ILA' ? s.cost.toFixed(2) + ' אג\'' : (s.cost > 0 ? costCurSymbol + s.cost.toFixed(2) : 'RSU')} × ${s.qty.toLocaleString()}</div>
+            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);">${(s.costCurrency === 'ILA' || (s.market === 'IL' && !s.costCurrency)) ? s.cost.toFixed(2) + ' אג\'' : (s.cost > 0 ? costCurSymbol + s.cost.toFixed(2) : 'RSU')} × ${s.qty.toLocaleString()}</div>
             ${editBtns}
           </div>
 
