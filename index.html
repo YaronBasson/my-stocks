@@ -2131,21 +2131,6 @@ if (!state.apiKey) {
 }
 derApiKeyIndicator();
 
-fetchFX().then(() => {
-  smartRefresh();
-  smartConnectWS();
-}).catch(() => {
-  renderRateBar();
-  renderAll();
-});
-
-// If no API key — show hint
-if (!state.apiKey) {
-  setTimeout(() => showNotif('הכנס Finnhub API key בהגדרות ⚙'), 800);
-}
-gleEdit()" title="עריכה">✎</div>`
-);
-
 // Init
 loadState();
 loadLastPrices();
@@ -2156,36 +2141,7 @@ document.getElementById('api-key-input').value = state.apiKey || '';
     const tdInput = document.getElementById('td-key-input');
     if (tdInput) tdInput.value = state.tdKey || '';
     renderTDCounter();
-renderAll(); // render immediately — no loading screen
-renderMarketStatus();
-renderApiKeyIndicator();
 
-fetchFX().then(() => {
-  smartRefresh();
-  smartConnectWS();
-}).catch(() => {
-  renderRateBar();
-  renderAll();
-});
-
-// If no API key — show hint
-if (!state.apiKey) {
-  setTimeout(() => showNotif('הכנס Finnhub API key בהגדרות ⚙'), 800);
-}
-derApiKeyIndicator();
-
-fetchFX().then(() => {
-  smartRefresh();
-  smartConnectWS();
-}).catch(() => {
-  renderRateBar();
-  renderAll();
-});
-
-// If no API key — show hint
-if (!state.apiKey) {
-  setTimeout(() => showNotif('הכנס Finnhub API key בהגדרות ⚙'), 800);
-}
 </script>
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{});}</script>
 </body>
