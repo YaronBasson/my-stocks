@@ -2106,13 +2106,8 @@ document.querySelector('.topbar-right').insertAdjacentHTML('afterbegin',
 // Init
 loadState();
 loadLastPrices();
-document.getElementById('api-key-input').value = state.apiKey || '';
-    const eohdInput = document.getElementById('eohd-key-input');
-    if (eohdInput) eohdInput.value = state.eohdKey || '';
-    renderEOHDCounter();
-    const tdInput = document.getElementById('td-key-input');
-    if (tdInput) tdInput.value = state.tdKey || '';
-    renderTDCounter();
+renderEOHDCounter();
+renderTDCounter();
 renderAll(); // render immediately — no loading screen
 renderMarketStatus();
 renderApiKeyIndicator();
@@ -2134,13 +2129,8 @@ derApiKeyIndicator();
 // Init
 loadState();
 loadLastPrices();
-document.getElementById('api-key-input').value = state.apiKey || '';
-    const eohdInput = document.getElementById('eohd-key-input');
-    if (eohdInput) eohdInput.value = state.eohdKey || '';
-    renderEOHDCounter();
-    const tdInput = document.getElementById('td-key-input');
-    if (tdInput) tdInput.value = state.tdKey || '';
-    renderTDCounter();
+renderEOHDCounter();
+renderTDCounter();
 
 </script>
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{});}</script>
