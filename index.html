@@ -327,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v7.1</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v7.2</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -496,7 +496,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v7.1</div>
+          <div class="lbl">Stock Portfolio Tracker v7.2</div>
         </div>
       </div>
     </div>
@@ -1555,8 +1555,24 @@ function setSort(s) {
 }
 
 function toggleEdit() {
+  const wasOpen = state.editMode;
   state.editMode = !state.editMode;
-  if (!state.editMode) formOpen = false; // closing edit mode clears form lock
+  if (!state.editMode) {
+    formOpen = false;
+    // Check if any stocks are pending price fetch
+    const hasPending = state.portfolios.some(p =>
+      p.stocks.some(s => s._pendingFetch)
+    );
+    if (hasPending) {
+      // Clear pending flag and fetch all prices
+      state.portfolios.forEach(p =>
+        p.stocks.forEach(s => { if (s._pendingFetch) delete s._pendingFetch; })
+      );
+      saveState();
+      showNotif('⏳ מעדכן מחירים...');
+      fetchAllPrices().then(() => renderAll());
+    }
+  }
   document.querySelector('.icon-btn[onclick="toggleEdit()"]').textContent = state.editMode ? '✓' : '✎';
   renderPortfolioView();
 }
@@ -1697,7 +1713,8 @@ async function addStockToPort(pIdx) {
   formOpen = false;
   if (form) form.style.opacity = '1';
 
-  fetchAllPrices().then(() => renderAll());
+  // Deferred: fetch prices when user presses ✓
+  renderAll();
   const curLabel = autoCostCurrency === 'USD' ? '($)' : autoCostCurrency === 'ILS' ? '(₪)' : autoCostCurrency === 'GBp' ? '(GBp)' : market === 'IL' ? '(אג)' : market === 'US' ? '($)' : '(GBp)';
   showNotif(`${ticker} נוסף ${curLabel} – ${autoName || ticker} ✓`);
 
