@@ -327,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v7.4</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v7.5</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -496,7 +496,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v7.4</div>
+          <div class="lbl">Stock Portfolio Tracker v7.5</div>
         </div>
       </div>
     </div>
@@ -1788,9 +1788,24 @@ async function addStockToPort(pIdx) {
     fetchREST(ticker, market).then(d => {
       if (d) {
         state.prices[ticker] = { price: d.price, prev: d.prev || d.price, currency: d.currency, name: d.name || null, t: Date.now() };
+        // Set costCurrency from API result (was null at push time)
+        const s = state.portfolios[pIdx].stocks[sIdx];
+        if (s && !s.costCurrency) {
+          const apiCur = d.currency;
+          if (apiCur === 'ILA') s.costCurrency = 'ILA';
+          else if (apiCur === 'ILS') s.costCurrency = 'ILS';
+          else if (apiCur === 'USD') s.costCurrency = 'USD';
+          else if (apiCur === 'GBp' || apiCur === 'GBX') s.costCurrency = 'GBp';
+          else if (apiCur === 'GBP') s.costCurrency = 'GBP';
+          else s.costCurrency = apiCur || (market === 'US' ? 'USD' : 'GBp');
+          saveState();
+        }
+        // Also auto-correct GBp→USD for USD-priced LSE stocks (like VWRA.L)
+        if (s && s.market === 'UK' && d.currency === 'USD' && s.costCurrency === 'GBp') {
+          s.costCurrency = 'USD';
+          saveState();
+        }
         computePortfolio(state.portfolios[pIdx]);
-        // Check LSE currency mismatch after a short delay
-        if (market === 'UK') setTimeout(() => checkAndFixLSECurrency(ticker, pIdx, sIdx), 500);
       }
       renderAll();
     });
