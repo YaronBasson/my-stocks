@@ -327,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v7.2</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v7.3</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -496,7 +496,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v7.2</div>
+          <div class="lbl">Stock Portfolio Tracker v7.3</div>
         </div>
       </div>
     </div>
@@ -1117,6 +1117,68 @@ async function isMutualFund(tickerId) {
   return /^\d{7}$/.test(clean);
 }
 
+
+// After fetching LSE price, check if cost currency matches API currency
+async function checkAndFixLSECurrency(ticker, pIdx, sIdx) {
+  const s = state.portfolios[pIdx]?.stocks[sIdx];
+  const pd = state.prices[ticker];
+  if (!s || !pd || s.market !== 'UK') return;
+
+  const apiCur = pd.currency;
+  const costCur = s.costCurrency;
+
+  // If API returned USD but user might have entered GBp (or vice versa)
+  // and the currencies differ — ask
+  if (apiCur && costCur && apiCur !== costCur) {
+    // Show clarification
+    askCurrencyChoice(ticker, pIdx, sIdx, apiCur, (chosen) => {
+      s.costCurrency = chosen;
+      saveState();
+      computePortfolio(state.portfolios[pIdx]);
+      renderAll();
+      showNotif(`${ticker}: עלות עודכנה למטבע ${chosen}`);
+    });
+  }
+}
+
+
+// Show currency selection dialog for LSE stocks
+function askCurrencyChoice(ticker, pIdx, sIdx, detectedCurrency, onChoice) {
+  // Only ask for LSE when currency is unclear
+  const options = detectedCurrency === 'USD'
+    ? ['USD ($)', 'GBp (פנס)', 'GBP (£)']
+    : ['GBp (פנס)', 'USD ($)', 'GBP (£)'];
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:var(--bg2);border-radius:12px;padding:20px;max-width:320px;width:90%;direction:rtl;">
+      <div style="font-weight:600;margin-bottom:8px;">מטבע עלות — ${ticker}</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">
+        ה-API מחזיר <b>${detectedCurrency}</b>. באיזה מטבע הזנת את העלות שלך?
+      </div>
+      ${options.map((opt, i) => `
+        <button onclick="this.closest('.currency-modal').dataset.choice='${opt.split(' ')[0]}'"
+          style="display:block;width:100%;margin-bottom:8px;padding:10px;background:var(--bg3);
+          border:0.5px solid var(--border2);border-radius:8px;cursor:pointer;font-size:13px;
+          text-align:right;">
+          ${opt}
+        </button>`).join('')}
+      <button onclick="document.body.removeChild(this.closest('[style*=fixed]'))"
+        style="display:block;width:100%;padding:8px;background:none;border:none;
+        color:var(--text3);font-size:12px;cursor:pointer;">ביטול</button>
+    </div>`;
+  modal.classList.add('currency-modal');
+  modal.querySelectorAll('button[onclick*="choice"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const choice = btn.textContent.trim().split(' ')[0];
+      document.body.removeChild(modal);
+      onChoice(choice);
+    });
+  });
+  document.body.appendChild(modal);
+}
+
 async function fetchREST(ticker, market) {
   // Israeli mutual funds (7-digit number): use Maya TASE API chain
   if (market === 'IL' && await isMutualFund(ticker)) {
@@ -1708,12 +1770,25 @@ async function addStockToPort(pIdx) {
   await new Promise(r => setTimeout(r, 200));
 
   const isML = /^\d{7}/.test(ticker.replace('.TA',''));
-  state.portfolios[pIdx].stocks.push({ ticker, name: autoName || ticker, qty, cost, market, costCurrency: autoCostCurrency, isMutualFund: isML });
+  state.portfolios[pIdx].stocks.push({ ticker, name: autoName || ticker, qty, cost, market, costCurrency: autoCostCurrency, isMutualFund: isML, _pendingFetch: market === 'IL' });
   saveState();
   formOpen = false;
   if (form) form.style.opacity = '1';
 
-  // Deferred: fetch prices when user presses ✓
+  // US/UK: fetch immediately via Yahoo (no meaningful limit for few stocks)
+  // IL: deferred until user presses ✓ (EODHD/TD have daily limits)
+  if (market !== 'IL') {
+    const sIdx = state.portfolios[pIdx].stocks.length - 1;
+    fetchREST(ticker, market).then(d => {
+      if (d) {
+        state.prices[ticker] = { price: d.price, prev: d.prev || d.price, currency: d.currency, name: d.name || null, t: Date.now() };
+        computePortfolio(state.portfolios[pIdx]);
+        // Check LSE currency mismatch after a short delay
+        if (market === 'UK') setTimeout(() => checkAndFixLSECurrency(ticker, pIdx, sIdx), 500);
+      }
+      renderAll();
+    });
+  }
   renderAll();
   const curLabel = autoCostCurrency === 'USD' ? '($)' : autoCostCurrency === 'ILS' ? '(₪)' : autoCostCurrency === 'GBp' ? '(GBp)' : market === 'IL' ? '(אג)' : market === 'US' ? '($)' : '(GBp)';
   showNotif(`${ticker} נוסף ${curLabel} – ${autoName || ticker} ✓`);
