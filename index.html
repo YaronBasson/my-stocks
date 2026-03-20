@@ -327,7 +327,7 @@ body { display: flex; flex-direction: column; }
   <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:8px;direction:ltr;">
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="font-size:17px;font-weight:700;">📊 תיקי מניות</span>
-      <span style="font-size:10px;color:var(--text3);font-weight:400;">v7.5</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400;">v7.6</span>
     </div>
     <div class="topbar-right">
       <div class="live-dot off" id="live-dot" title="סטטוס חיבור"></div>
@@ -496,7 +496,7 @@ body { display: flex; flex-direction: column; }
       <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
         <div>
           <div style="font-size:14px; font-weight:500;">גרסה</div>
-          <div class="lbl">Stock Portfolio Tracker v7.5</div>
+          <div class="lbl">Stock Portfolio Tracker v7.6</div>
         </div>
       </div>
     </div>
@@ -1289,11 +1289,21 @@ function computePortfolio(p) {
     const price = pd?.price;
     const prev = pd?.prev || price;
     const cur = pd?.currency;
-    // Auto-correct costCurrency if API says USD but stock was saved with GBp
-    // (happens with USD-priced ETFs on LSE like VWRA.L, SPYL.L)
-    if (s.market === 'UK' && cur === 'USD' && s.costCurrency === 'GBp') {
-      s.costCurrency = 'USD';
-      saveState();
+    // Auto-correct costCurrency for UK stocks:
+    // If API says USD but saved as GBp/null → fix to USD
+    // If API says GBp/GBX but saved as USD/null → fix to GBp
+    if (s.market === 'UK' && cur) {
+      if ((cur === 'USD') && (s.costCurrency === 'GBp' || s.costCurrency === 'GBX' || !s.costCurrency)) {
+        s.costCurrency = 'USD'; saveState();
+      } else if ((cur === 'GBp' || cur === 'GBX') && (s.costCurrency === 'USD' || !s.costCurrency)) {
+        s.costCurrency = 'GBp'; saveState();
+      } else if (cur === 'GBP' && !s.costCurrency) {
+        s.costCurrency = 'GBP'; saveState();
+      }
+    }
+    // For US stocks with no costCurrency, default to USD
+    if (s.market === 'US' && !s.costCurrency) {
+      s.costCurrency = 'USD'; saveState();
     }
     if (price != null) {
       const val = toILS(price * s.qty, cur, s.market);
